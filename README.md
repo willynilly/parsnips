@@ -89,28 +89,44 @@ When Parsnips processes a Python file or directory, it follows this deterministi
 - The content SWHID for each node fragment is not generated during extraction.
 - Instead, the `node_metadata.json` file itself becomes the fragment boundary.
 - The fragment SWHID is computed as the `blake2s()` hash over the serialized `node_metadata.json` content.
-- This ensures the SWHID includes full structural and textual information, not just the raw source text.
+- This ensures the SWHID includes both full structural metadata and the exact source text, not just the raw source text alone.
 
-## Linking SWHIDs with Anchor Qualifiers
+### Fragment Identifier Semantics
 
-Fragment-level SWHIDs can be paired with the file SWHID using SWHID's *anchor* qualifier.
+Parsnips fragment-level SWHIDs are based on the full serialized metadata of each AST node — including both the exact source code fragment and its structural metadata. This means:
+
+- The identifier uniquely represents a specific code fragment in its structural context.
+- Any change to the source code, the AST structure, or even to the serialization format would change the SWHID.
+- The SWHID does not solely identify the source text — it identifies the full parsed fragment as extracted.
+
+This design enables reproducible, semantically-rich identifiers that reflect both the code content and its structure in the parse tree.
+
+
+## Citing Fragment-level SWHIDs with Context Qualifiers
+
+Parsnip creates files for each node in an abstract parse tree so that code fragments like can be cited using SWHIDs. You can cite code fragments by citing their corresponding Parsnip node_metadata.json files. 
+
+Each node_metadata.json file corresponds to a node in the abstract syntax tree (AST). Like any other file, it can be cited directly using its SWHID. Like other content SWHIDs, it should cited with context qualifiers that describe its origin, anchor, and path.
+
+You can use the Parsnip CLI to search for code fragments in AST nodes and their corresponding node SWHIDs. You can also discover the SWHID of the source code file which the node was parsed. 
 
 For example:
 
-- File SWHID:
+- Release SWHID (e.g., the SWHID for an annotated tag):
   ```
-  swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12
+  swh:1:rel:abcdef1234567890abcdef1234567890abcdef12
   ```
-- Fragment SWHID:
+- Unqualified Parsnip AST Node SWHID (identifies the node_metadata.json file that represents the AST node that contains the code fragment):
   ```
   swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09
   ```
-- Anchored form:
+- Qualified Parsnip AST Node SWHID (e.g., the Python App class in main.py):
   ```
-  swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09;anchor=swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12
+  swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09;anchor=swh:1:rel:abcdef1234567890abcdef1234567890abcdef12;path=/src/.parsnips/parsnips__main__py/LOCOT1__Module__node/L1C0T2__ClassDef__App/node_metadata.json
   ```
 
-This allows the fragment to be fully tied to the exact version of its parent file.
+*Note* Parsnips search currently only returns the Unqualified AST Node SWHID. The `node_metadata.json` files do not contain anchor qualifier information or path information relative to the anchor. In the future, the CLI will take parameters that will allow the search to create the qualified AST Node SWHID. So currently, authors must manually contrstruct the qualifiers.
+ 
 
 ## CLI Parameters
 
