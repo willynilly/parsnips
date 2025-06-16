@@ -56,27 +56,21 @@ When Parsnips processes a Python file or directory, it follows this deterministi
    - To ensure filesystem-safe and portable folder names, labels are strictly sanitized:
      - Only characters `A-Z`, `a-z`, `0-9`, `_`, and `-` are allowed.
      - All other characters (including spaces, parentheses, brackets, symbols, and punctuation) are replaced with underscores (`_`).
-     - This ensures compatibility across all operating systems and archival storage systems.
 
 6. **Outputs Generated:**
 
-   For each node folder, Parsnips creates two files:
+   For each node folder, Parsnips creates one file:
 
-   ### 1. `node_text.txt`
-
-   - Contains the exact source code fragment for the AST node as extracted by `asttokens.get_text()`.
-   - This text is **not normalized** to preserve archival integrity.
-   - This file's content is hashed using `hashlib.blake2s()` to generate a fragment-level SWHID following the Software Heritage specification.
-
-   ### 2. `node_metadata.json`
+   ### `node_metadata.json`
 
    - Contains structured metadata for the AST node including:
      - `type`: The AST node type (e.g. `FunctionDef`).
+     - `label`: The unsanitized label of the node.
+     - `text`: The exact source text fragment for the node.
      - `lineno`: The node’s declared line number (or `null` if absent).
      - `effective_lineno`: The inherited line number after normalization.
      - `col_offset`: The column offset of the node.
      - `file_swhid`: The SWHID of the full source file.
-     - `node_swhid`: The content SWHID for the node's source text.
 
 7. **Directory Structure:**
 
@@ -89,38 +83,48 @@ When Parsnips processes a Python file or directory, it follows this deterministi
 
    - Folders are deterministically named using the inherited line number, column offset, and traversal index.
    - Sorting is lexicographic but naturally places nodes with lower line numbers first.
-   - Nodes missing line numbers inherit their parent’s line number, ensuring children follow their parents naturally.
+
+## Fragment-Level SWHIDs
+
+- The content SWHID for each node fragment is not generated during extraction.
+- Instead, the `node_metadata.json` file itself becomes the fragment boundary.
+- The fragment SWHID is computed as the `blake2s()` hash over the serialized `node_metadata.json` content.
+- This ensures the SWHID includes full structural and textual information, not just the raw source text.
 
 ## Linking SWHIDs with Anchor Qualifiers
 
-The node-level SWHIDs generated for each `node_text.txt` file can be paired with the SWHID of the full file using SWHID's *anchor* qualifier.
+Fragment-level SWHIDs can be paired with the file SWHID using SWHID's *anchor* qualifier.
 
-For example, suppose:
+For example:
 
-- The full file SWHID is:\
-  `swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12`
+- File SWHID:
+  ```
+  swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12
+  ```
+- Fragment SWHID:
+  ```
+  swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09
+  ```
+- Anchored form:
+  ```
+  swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09;anchor=swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12
+  ```
 
-- The node fragment SWHID is:\
-  `swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09`
+This allows the fragment to be fully tied to the exact version of its parent file.
 
-A qualified fragment-level identifier can be constructed:
+## CLI Parameters
 
-```
-swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09;anchor=swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12
-```
+Parsnips provides multiple command-line options:
 
-This allows the fragment identifier to be explicitly anchored to its parent file in accordance with the Software Heritage SWHID specification for content-addressable fragment identification.
-
-## Motivation
-
-Parsnips was developed to enable fragment-level archival of Python code within content-addressable archives such as [Software Heritage](https://www.softwareheritage.org/). While Software Heritage currently provides content identifiers for full source files, Parsnips enables generating reproducible identifiers for fine-grained code elements tied directly to the abstract syntax tree.
-
-The goal is to enable:
-
-- Reproducible code citation
-- Sub-file archival
-- Persistent identifiers for code fragments
-- Long-term scientific reproducibility
+| Argument   | Description                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `-p` or `--path`     | Path to file or directory to process                                                        |
+| `-c` or `--clean`  | Delete all `.parsnips` folders recursively                                                  |
+| `-s` or `--search` | Search using a regular expression inside the `text` field of all `node_metadata.json` files |
+| `-n` or `--normalize-search` | Apply Unicode normalization (NFC) to both the search pattern and node text before regex matching. This only applies to search operations and does not affect extraction. Extraction always preserves exact byte content for archival integrity. |
+| `-q` or `--quiet`  | Suppress console output                                                                     |
+| `-l` or `--logfile`    | Write logs to specified JSON file                                                                     |
+| `--strict` | Fail immediately on first error or missing .parsnips folder                                                            |
 
 ## Example Usage
 
@@ -130,7 +134,7 @@ The goal is to enable:
 parsnips path/to/my/project
 ```
 
-- This will recursively process all `.py` files under `path/to/my/project`, generate `.parsnips/` directories for each directory containing Python files, and populate these directories with the extracted fragment-level outputs.
+- This will recursively process all `.py` files under `path/to/my/project`, generate `.parsnips/` directories for each directory containing Python files, and populate these directories with metadata files for the extracted fragment-level outputs.
 
 ### Process a single file:
 
@@ -144,9 +148,7 @@ parsnips path/to/file.py
 path/to/.parsnips/parsnips__file__py/
 ```
 
-## Example Input and Output
-
-### Example input file `example.py`:
+#### Example Input file `example.py`:
 
 ```python
 class MyClass:
@@ -156,31 +158,63 @@ class MyClass:
 result = MyClass().foo(10)
 ```
 
-### Example output directory:
+#### Example Output structure:
 
 ```bash
 .parsnips/parsnips__example__py/
   L1C0T1__ClassDef__MyClass/
     L2C4T2__FunctionDef__foo/
       L3C8T3__Return__node/
-  L5C0T4__Assign__result_MyClass__foo_10
+  L5C0T4__Assign__result_MyClass__foo_10/
 ```
 
-- Note that characters like `(`, `)`, `,`, and `.` have been sanitized into underscores (`_`) in the folder names.
+### Search for the SWHID of a code fragment by using regular expressions for the source code fragment
 
-## Contributing
+You can use Parsnips to search for the SWHID of a code fragment by using regular expressions that match on the text of the code fragment.
 
-Pull requests and contributions are welcome!
+#### Example Search Usage
 
-To set up your development environment:
+Suppose you have already extracted a directory and want to search for any AST nodes containing `"hello world"`.
+
+Run:
 
 ```bash
-git clone https://github.com/willynilly/parsnips.git
-cd parsnips
-pip install -e .[testing,dev]
-pre-commit install -t pre-commit -t pre-push
-pre-commit run --all-files
+parsnips path/to/my/project --search "hello world"
 ```
+
+Example output:
+
+```json
+{
+  ".parsnips/parsnips__example__py/L8C4T7__Return__node/node_metadata.json": {
+    "node_swhid": "swh:1:cnt:1234567890abcdef1234567890abcdef12345678",
+    "node_metadata": {
+      "type": "Return",
+      "label": "node",
+      "text": "return \"hello world\"",
+      "lineno": 8,
+      "effective_lineno": 8,
+      "col_offset": 4,
+      "file_swhid": "swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12"
+    }
+  },
+  ".parsnips/parsnips__example__py/L9C0T8__Constant__hello_world/node_metadata.json": {
+    "node_swhid": "swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09",
+    "node_metadata": {
+      "type": "Constant",
+      "label": "hello world",
+      "text": "\"hello world\"",
+      "lineno": 9,
+      "effective_lineno": 9,
+      "col_offset": 0,
+      "file_swhid": "swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12"
+    }
+  }
+}
+```
+
+If run with `--strict` mode and `.parsnips` folders are missing, the command will fail instead of silently returning empty results.
+
 
 ## Licensing
 
@@ -208,4 +242,3 @@ If you use Parsnips in your research or projects, please cite it using the metad
 ## Disclaimer
 
 Parsnips is an experimental tool designed to support research and archival workflows. Use at your own risk. Feedback and contributions are welcome.
-
