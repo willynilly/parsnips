@@ -118,7 +118,7 @@ Parsnips provides multiple command-line options:
 
 | Argument   | Description                                                                                 |
 | ---------- | ------------------------------------------------------------------------------------------- |
-| `-p` or `--path`     | Path to file or directory to process                                                        |
+| path (positional argument)  | Path to Python file or directory to process (default: current directory)                                                        |
 | `-c` or `--clean`  | Delete all `.parsnips` folders recursively                                                  |
 | `-s` or `--search` | Search using a regular expression inside the `text` field of all `node_metadata.json` files |
 | `-n` or `--normalize-search` | Apply Unicode normalization (NFC) to both the search pattern and node text before regex matching. This only applies to search operations and does not affect extraction. Extraction always preserves exact byte content for archival integrity. |
