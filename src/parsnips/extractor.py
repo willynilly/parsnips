@@ -26,7 +26,6 @@ class ParsnipsExtractor:
     def _process_directory(self, directory: Path):
         for root, dirs, files in os.walk(directory, topdown=True, followlinks=False):
             dirs[:] = [d for d in dirs if d != '.parsnips']
-
             py_files = [f for f in files if f.endswith('.py')]
 
             if py_files:
@@ -108,6 +107,8 @@ class ParsnipsExtractor:
 
         metadata = {
             'type': node_type,
+            'label': node_label,
+            'text': node_text,
             'lineno': lineno,
             'effective_lineno': effective_lineno,
             'col_offset': col_offset,
@@ -115,7 +116,8 @@ class ParsnipsExtractor:
             'node_swhid': node_swhid
         }
         with (node_path / 'node_metadata.json').open('w', encoding='utf-8') as f:
-            json.dump(metadata, f, indent=4)
+            json.dump(metadata, f, indent=4, ensure_ascii=False)
+
 
         for child in ast.iter_child_nodes(node):
             self._extract_node(atok, child, node_path, file_swhid, parent_lineno=effective_lineno)
@@ -127,6 +129,12 @@ class ParsnipsExtractor:
             return node.name
         elif isinstance(node, ast.ClassDef):
             return node.name
+        elif isinstance(node, ast.arg):
+            return node.arg
+        elif isinstance(node, ast.Attribute):
+            return node.attr
+        elif isinstance(node, ast.Name):
+            return node.id
         elif isinstance(node, ast.Import):
             return 'import'
         elif isinstance(node, ast.ImportFrom):
@@ -136,6 +144,8 @@ class ParsnipsExtractor:
             return '_'.join(targets)
         elif isinstance(node, ast.Lambda):
             return 'lambda'
+        elif isinstance(node, ast.Constant):
+            return str(node.value)
         else:
             return 'node'
 
