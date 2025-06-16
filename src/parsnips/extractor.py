@@ -43,6 +43,7 @@ class ParsnipsExtractor:
                     self._process_file(Path(root) / py_file, parsnips_dir)
 
     def _process_file(self, file_path: Path, output_dir=None, force_parsnips_dir=False):
+        self.logger.info(f"Parsnips extracting: `{file_path}`")
         parent_dir = file_path.parent
 
         if force_parsnips_dir:
@@ -100,11 +101,6 @@ class ParsnipsExtractor:
         except Exception:
             node_text = "<source unavailable>"
 
-        node_swhid = self.compute_swhid(node_text)
-
-        with (node_path / 'node_text.txt').open('w', encoding='utf-8') as f:
-            f.write(node_text)
-
         metadata = {
             'type': node_type,
             'label': node_label,
@@ -112,12 +108,11 @@ class ParsnipsExtractor:
             'lineno': lineno,
             'effective_lineno': effective_lineno,
             'col_offset': col_offset,
-            'file_swhid': file_swhid,
-            'node_swhid': node_swhid
+            'file_swhid': file_swhid
         }
+
         with (node_path / 'node_metadata.json').open('w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=4, ensure_ascii=False)
-
 
         for child in ast.iter_child_nodes(node):
             self._extract_node(atok, child, node_path, file_swhid, parent_lineno=effective_lineno)

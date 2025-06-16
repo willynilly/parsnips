@@ -26,7 +26,7 @@ def extractor():
 def test_extraction_creates_expected_output(extractor, simple_python_code):
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = Path(tmpdir) / "example.py"
-        file_path.write_text(simple_python_code)
+        file_path.write_text(simple_python_code, encoding="utf-8")
 
         extractor.process(file_path)
 
@@ -42,14 +42,16 @@ def test_extraction_creates_expected_output(extractor, simple_python_code):
         found = any("FunctionDef__foo" in folder.name for folder in node_dirs)
         assert found
 
-        # Verify files exist in all node folders
+        # Verify node_metadata.json exists and has correct structure
         for folder in node_dirs:
-            node_text = folder / "node_text.txt"
             node_meta = folder / "node_metadata.json"
-            assert node_text.exists()
             assert node_meta.exists()
-            # Check metadata structure
-            with node_meta.open() as f:
+            with node_meta.open(encoding="utf-8") as f:
                 metadata = json.load(f)
             assert "type" in metadata
-            assert "node_swhid" in metadata
+            assert "label" in metadata
+            assert "text" in metadata
+            assert "lineno" in metadata
+            assert "effective_lineno" in metadata
+            assert "col_offset" in metadata
+            assert "file_swhid" in metadata

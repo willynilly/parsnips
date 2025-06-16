@@ -1,88 +1,129 @@
-
 import argparse
-import logging
+import hashlib
 import json
+import logging
 import os
-import sys
-from pathlib import Path
 import shutil
+import sys
+import unicodedata
+from pathlib import Path
+
+import regex
+
 from parsnips.extractor import ParsnipsExtractor
 
-class JsonLogHandler(logging.Handler):
-    def __init__(self, log_path):
-        super().__init__()
-        self.log_path = log_path
-        self.logs = []
 
-    def emit(self, record):
-        log_entry = {
-            "level": record.levelname,
-            "path": getattr(record, "pathname", ""),
-            "message": record.getMessage()
-        }
-        self.logs.append(log_entry)
+def normalize_unicode(text):
+    """Apply Unicode normalization (NFC) to text."""
+    return unicodedata.normalize("NFC", text)
 
-    def close(self):
-        with open(self.log_path, 'w', encoding='utf-8') as f:
-            json.dump(self.logs, f, indent=4)
-        super().close()
+def compute_swhid(content_string):
+    content_bytes = content_string.encode("utf-8")
+    digest = hashlib.blake2s(content_bytes, digest_size=32).hexdigest()
+    swhid = f"swh:1:cnt:{digest}"
+    return swhid
 
-def clean_parsnips(path):
-    for root, dirs, files in os.walk(path, topdown=True):
-        for dir in dirs:
-            if dir == '.parsnips':
-                target = Path(root) / dir
-                try:
-                    shutil.rmtree(target)
-                    print(f"Deleted {target}")
-                except Exception as e:
-                    print(f"Failed to delete {target}: {e}", file=sys.stderr)
-
-def main():
-    parser = argparse.ArgumentParser(description="Parsnips: AST-based SWHID extractor")
-    parser.add_argument("path", type=str, nargs='?', default=".", help="File or directory to process")
-    parser.add_argument("--quiet", action="store_true", help="Suppress all output")
-    parser.add_argument("--log", type=str, help="Log file for structured logging")
-    parser.add_argument("--clean", action="store_true", help="Clean all .parsnips folders")
-    parser.add_argument("--strict", action="store_true", help="Fail immediately on any error or warning")
-    args = parser.parse_args()
-
-    path = Path(args.path)
-
-    # Setup logging
-    logger = logging.getLogger("parsnips")
-    logger.setLevel(logging.INFO)
-    handlers = []
-
-    if not args.quiet:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
-        logger.addHandler(console_handler)
-        handlers.append(console_handler)
-
-    if args.log:
-        json_handler = JsonLogHandler(args.log)
-        logger.addHandler(json_handler)
-        handlers.append(json_handler)
-
-    if args.clean:
-        clean_parsnips(path)
-        sys.exit(0)
-
-    extractor = ParsnipsExtractor(logger, strict=args.strict)
+def search_parsnips(path, pattern, strict=False, normalize_search=False):
+    results = {}
+    
+    # Precompile pattern optionally normalized
+    if normalize_search:
+        pattern = normalize_unicode(pattern)
 
     try:
-        extractor.process(path)
-    except RuntimeError as e:
-        logger.error(str(e))
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"Unhandled exception: {e}")
+        regex_compiled = regex.compile(pattern)
+    except regex.error as e:
+        print(f"Invalid regular expression: {e}", file=sys.stderr)
         sys.exit(1)
 
-    for h in handlers:
-        if hasattr(h, "close"):
-            h.close()
 
-if __name__ == "__main__":
+    if path.is_file():
+        start_dir = path.parent
+    elif path.is_dir():
+        start_dir = path
+    else:
+        print(f"Invalid path: {path}", file=sys.stderr)
+        sys.exit(1)
+
+    found_parsnips = False
+
+    for root, dirs, files in os.walk(start_dir, topdown=True):
+        for d in dirs:
+            if d == '.parsnips':
+                found_parsnips = True
+                parsnips_dir = Path(root) / d
+                for p_root, _, p_files in os.walk(parsnips_dir, topdown=True):
+                    for file in p_files:
+                        if file == "node_metadata.json":
+                            full_path = Path(p_root) / file
+                            try:
+                                with open(full_path, encoding='utf-8') as f:
+                                    metadata = json.load(f)
+                                text = metadata.get("text", "")
+                                text_to_search = normalize_unicode(text) if normalize_search else text
+                                if regex_compiled.search(text_to_search):
+                                    rel_path = os.path.relpath(full_path, start=Path.cwd())
+                                    metadata_str = json.dumps(metadata, sort_keys=True, ensure_ascii=False)
+                                    node_swhid = compute_swhid(metadata_str)
+                                    results[rel_path] = {
+                                        "node_swhid": node_swhid,
+                                        "node_metadata": metadata
+                                    }
+                            except Exception as e:
+                                print(f"Error reading {full_path}: {e}", file=sys.stderr)
+
+    if strict and not found_parsnips:
+        print("Error: No .parsnips directories found.", file=sys.stderr)
+        sys.exit(1)
+
+    return results
+
+def main():
+    parser = argparse.ArgumentParser(description='Parsnips AST extractor and search tool.')
+    parser.add_argument('-p', '--path', type=str, default='.', help='Path to Python file or directory to process (default: current directory)')
+    parser.add_argument('-c', '--clean', action='store_true', help='Recursively delete all .parsnips folders')
+    parser.add_argument('-s', '--search', type=str, help='Regular expression to search within node texts')
+    parser.add_argument('-n', '--normalize-search', action='store_true', help='Apply Unicode normalization (NFC) to both the search pattern and node text before regex matching. This only applies to search operations and does not affect extraction. Extraction always preserves exact byte content for archival integrity.')
+    parser.add_argument('-q', '--quiet', action='store_true', help='Suppress logs to stdout')
+    parser.add_argument('-l', '--logfile', type=str, help='Write logs to specified JSON file')
+    parser.add_argument('--strict', action='store_true', help='Abort on first error or missing .parsnips folder')
+
+    args = parser.parse_args()
+    input_path = Path(args.path)
+
+    if args.clean:
+        for root, dirs, _ in os.walk(input_path, topdown=True):
+            for d in dirs:
+                if d == '.parsnips':
+                    parsnips_dir = Path(root) / d
+                    try:
+                        shutil.rmtree(parsnips_dir)
+                        print(f"Deleted: {parsnips_dir}")
+                    except Exception as e:
+                        print(f"Failed to delete {parsnips_dir}: {e}", file=sys.stderr)
+        sys.exit(0)
+
+    if args.search:
+        results = search_parsnips(input_path, args.search, strict=args.strict, normalize_search=args.normalize_search)
+        print(json.dumps(results, indent=2, sort_keys=True, ensure_ascii=False))
+        sys.exit(0)
+
+    logger = logging.getLogger("parsnips")
+    logger.setLevel(logging.INFO)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    if not args.quiet:
+        logger.addHandler(stream_handler)
+
+    if args.logfile:
+        file_handler = logging.FileHandler(args.logfile, mode='w', encoding='utf-8')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+        logger.addHandler(file_handler)
+
+    extractor = ParsnipsExtractor(logger=logger, strict=args.strict)
+    extractor.process(input_path)
+    logger.info("Parsnips extraction complete.")
+
+if __name__ == '__main__':
     main()
