@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+title: parsnips
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Will
+    family-names: Riley
+    email: wanderingwill@gmail.com
+    orcid: "https://orcid.org/0000-0003-1822-6756"
+repository-code: >-
+  https://github.com/willynilly/parsnips
+abstract: >-
+  Create SWHIDs for Python classes, functions, and other source code fragments based on its abstract syntax tree.
+keywords:
+  - SWHID
+  - Software Heritage
+  - code fragment
+  - persistent identifier
+  - abstract parse tree
+  - citation
+license: Apache-2.0
+version: "1.0.0"
+date-released: "2025-06-16"
+references:
+  - title: Software Heritage SWHID Specification
+    type: website
+    url: https://docs.softwareheritage.org/devel/swh-model/#swh-ids
+    authors:
+      - name: Software Heritage
+    date-accessed: 2025-06-16
+  - title: asttokens
+    version: 3.0.0
+    type: software
+    authors:
+    - affiliation: Grist Labs
+      family-names: Sagalovskiy
+      given-names: Dmitry
+    license:
+    - Apache-2.0
+
+

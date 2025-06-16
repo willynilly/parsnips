@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "parsnips"
+version = "1.0.0"
+description = "Create SWHIDs for Python classes, functions, and other source code fragments based on its abstract syntax tree."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-only"
+keywords = ["SWHID", "Software Heritage", "code fragment", "persistent identifier", "abstract parse tree", "citation"]
+authors = [
+  { name = "Will Riley", email = "wanderingwill@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Version Control",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Utilities"
+]
+
+dependencies = ["asttokens>=3.0.0"]
+
+[project.urls]
+Homepage = "https://github.com/willynilly/parsnips"
+Documentation = "https://github.com/willynilly/parsnips#readme"
+Issues = "https://github.com/willynilly/parsnips/issues"
+Source = "https://github.com/willynilly/parsnips"
+
+[project.optional-dependencies]
+testing = [
+    "pytest>=8.3.5",
+]
+dev = [
+    "ruff>=0.11.12",
+    "pre-commit>=4.2.0"
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
+
+[tool.hatch.build]
+include = ["src/parsnips/**", "CITATION.cff"]
+license-files = ["LICEN[CS]E*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/parsnips"]
+
+
+[project.scripts]
+parsnips = "parsnips.main:main"

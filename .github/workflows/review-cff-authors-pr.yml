@@ -1,0 +1,50 @@
+name: Review CFF Authors on Pull Request
+
+on:
+  pull_request_target:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pull-requests: write  # Needed for posting PR comments
+
+jobs:
+  contributor-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out PR code safely
+        uses: actions/checkout@v3
+        with:
+          # Pulls the actual code from the PR (fork) without executing its workflows
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+      
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ">=3.10" # required for cff-author-updater
+          cache: 'pip' # optional for cff-author-updater
+
+      - name: Run cff-author-updater
+        uses: willynilly/cff-author-updater@v2.3.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          base_branch: main
+          head_branch: ${{ github.head_ref }}
+          cff_path: CITATION.cff
+          post_pr_comment: true
+          show_error_messages_in_pr_comment: true
+          show_warning_messages_in_pr_comment: true
+          show_info_messages_in_pr_comment: true
+          authorship_for_pr_commits: true
+          authorship_for_pr_reviews: true
+          authorship_for_pr_issues: true
+          authorship_for_pr_issue_comments: true
+          authorship_for_pr_comments: true
+          missing_author_invalidates_pr: true
+          duplicate_author_invalidates_pr: true
+          invalid_cff_invalidates_pr: true
+          can_skip_authorship: true
+          bot_blacklist: github-actions[bot]

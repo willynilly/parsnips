@@ -1,0 +1,53 @@
+name: Check software version consistency for citation purposes
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [published]
+
+  pull_request:
+
+jobs:
+  check-same-version:
+    name: Check same version
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ">=3.10" # required by same-version
+          cache: 'pip' # optional and only works for Python projects
+
+      - name: Run same-version
+        uses: willynilly/same-version@v7.1.0
+        with:
+          fail_for_missing_file: false
+          check_github_event: true
+          github_event_name: ${{ github.event_name }}
+          github_event_ref: ${{ github.ref }}
+          github_event_release_tag: ${{ github.event.release.tag_name }}
+          check_citation_cff: true
+          citation_cff_path: CITATION.cff
+          check_pyproject_toml: true
+          pyproject_toml_path: pyproject.toml
+          check_codemeta_json: true
+          codemeta_json_path: codemeta.json
+          check_zenodo_json: true
+          zenodo_json_path: .zenodo.json
+          check_package_json: false
+          check_setup_cfg: false
+          check_setup_py: false
+          check_r_description: false
+          check_composer_json: false
+          check_pom_xml: false
+          check_nuspec: false
+          check_cargo_toml: false
+          check_ro_crate_metadata_json: false
+          check_py_version_assignment: false
