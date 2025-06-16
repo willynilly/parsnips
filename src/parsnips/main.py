@@ -80,7 +80,7 @@ def search_parsnips(path, pattern, strict=False, normalize_search=False):
 
 def main():
     parser = argparse.ArgumentParser(description='Parsnips AST extractor and search tool.')
-    parser.add_argument('-p', '--path', type=str, default='.', help='Path to Python file or directory to process (default: current directory)')
+    parser.add_argument('path', nargs='?', default='.', help='Path to file or directory (default: current directory)')
     parser.add_argument('-c', '--clean', action='store_true', help='Recursively delete all .parsnips folders')
     parser.add_argument('-s', '--search', type=str, help='Regular expression to search within node texts')
     parser.add_argument('-n', '--normalize-search', action='store_true', help='Apply Unicode normalization (NFC) to both the search pattern and node text before regex matching. This only applies to search operations and does not affect extraction. Extraction always preserves exact byte content for archival integrity.')
