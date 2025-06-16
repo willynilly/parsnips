@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Create SWHIDs for Python classes, functions, and other source code fragments based on its abstract syntax tree."
 readme = "README.md"
 requires-python = ">=3.12"
-license = "GPL-3.0-only"
+license = "Apache-2.0"
 keywords = ["SWHID", "Software Heritage", "code fragment", "persistent identifier", "abstract parse tree", "citation"]
 authors = [
   { name = "Will Riley", email = "wanderingwill@gmail.com" },
