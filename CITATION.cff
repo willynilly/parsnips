@@ -12,7 +12,7 @@ authors:
 repository-code: >-
   https://github.com/willynilly/parsnips
 abstract: >-
-  Create SWHIDs for Python classes, functions, and other source code fragments based on its abstract syntax tree.
+  Generate, search, and cite SWHIDs for Python code fragments like classes, functions, and expressions.
 keywords:
   - SWHID
   - Software Heritage
