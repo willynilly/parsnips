@@ -1,10 +1,12 @@
 # Parsnips
 
-Create SWHIDs for Python classes, functions, and other source code fragments based on their abstract syntax tree (AST).
+Generate, search, and cite SWHIDs for Python code fragments like classes, functions, and expressions.
 
 ## Overview
 
-**Parsnips** is a Python tool that analyzes Python source files using the built-in `ast` module and `asttokens` to create fine-grained, reproducible identifiers for fragments of Python code. It is designed to support persistent software identifiers (SWHIDs) for structural code elements such as:
+**Parsnips** is a Python tool that analyzes source files to create a citable hierarchy of folders and metadata files representing nodes in a parsed abstract syntax tree (AST). AST nodes correspond to meaningful code fragments such as classes, functions, and expressions. The metadata files and folders can be stored in your repository. If you archive your repository on Software Heritage, you can then retrieve and cite the SWHIDs for these fragments.
+
+Parsnips uses the built-in `ast` module and `asttokens` to create fine-grained, reproducible identifiers for fragments of Python code. It is designed to support persistent software identifiers (SWHIDs) for structural code elements such as:
 
 - Functions
 - Classes
