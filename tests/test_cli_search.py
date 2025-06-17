@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from parsnips.extractor import ParsnipsExtractor
-from parsnips.main import compute_swhid, search_parsnips
+from parsnips.search import ParsnipsSearch
+from parsnips.swhid import Swhid
 
 
 @pytest.fixture
@@ -41,7 +42,8 @@ def test_precise_search_functionality(extractor, sample_python_code):
         # Perform search
         base_dir = Path(tmpdir)
         pattern = 'hello world'
-        results = search_parsnips(base_dir, pattern)
+        searcher = ParsnipsSearch()
+        results = searcher.search(base_dir, pattern)
 
         # Build expectations as tuples of (type, label)
         expected_nodes = {
@@ -56,7 +58,7 @@ def test_precise_search_functionality(extractor, sample_python_code):
 
         for rel_path, data in results.items():
             assert rel_path.endswith("node_metadata.json")
-            assert "node_swhid" in data
+            assert "node_swhid_without_qualifiers" in data
             assert "node_metadata" in data
 
             node_meta = data["node_metadata"]
@@ -67,8 +69,8 @@ def test_precise_search_functionality(extractor, sample_python_code):
 
             # Independently recompute SWHID and verify
             metadata_str = json.dumps(node_meta, sort_keys=True, ensure_ascii=False)
-            expected_swhid = compute_swhid(metadata_str)
-            assert data["node_swhid"] == expected_swhid
+            expected_swhid = Swhid.compute_content_swhid(metadata_str)
+            assert data["node_swhid_without_qualifiers"] == expected_swhid
 
         # Finally, ensure all expected nodes were found
         assert found_nodes == expected_nodes
