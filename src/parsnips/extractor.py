@@ -1,20 +1,27 @@
 import ast
-import hashlib
 import json
 import os
 import re
-import shutil
 from pathlib import Path
 
 import asttokens
+import pathspec
+
+from parsnips.swhid import Swhid
 
 
 class ParsnipsExtractor:
-    def __init__(self, logger, strict=False):
+    
+    def __init__(self, logger, strict=False, repo_root: Path | None = None):
         self.logger = logger
         self.strict = strict
+        self.repo_root = Path(repo_root).resolve() if repo_root else None
 
     def process(self, input_path: Path):
+        input_path = Path(input_path).resolve()
+        if not self.repo_root:
+            self.repo_root = input_path if input_path.is_dir() else input_path.parent
+
         if input_path.is_file():
             self._process_file(input_path, force_parsnips_dir=True)
         elif input_path.is_dir():
@@ -23,26 +30,35 @@ class ParsnipsExtractor:
             self.logger.error(f"Invalid path: {input_path}")
             self._abort()
 
+    def _load_ignore_spec(self) -> pathspec.PathSpec | None:
+        assert self.repo_root is not None
+        ignore_file = self.repo_root / ".parsnipsignore"
+        if ignore_file.exists():
+            patterns = ignore_file.read_text(encoding='utf-8').splitlines()
+            return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+        return None
+
     def _process_directory(self, directory: Path):
+        assert self.repo_root is not None
+
+        ignore_spec = self._load_ignore_spec()
+
         for root, dirs, files in os.walk(directory, topdown=True, followlinks=False):
-            dirs[:] = [d for d in dirs if d != '.parsnips']
-            py_files = [f for f in files if f.endswith('.py')]
+            # Remove ignored directories
+            if ignore_spec:
+                dirs[:] = [d for d in dirs if not ignore_spec.match_file(os.path.relpath(os.path.join(root, d), self.repo_root))]
+            else:
+                dirs[:] = [d for d in dirs if d != '.parsnips']
 
-            if py_files:
-                parsnips_dir = Path(root) / '.parsnips'
-                if parsnips_dir.exists():
-                    try:
-                        shutil.rmtree(parsnips_dir)
-                        self.logger.info(f"Deleted existing {parsnips_dir}")
-                    except Exception as e:
-                        self.logger.error(f"Failed to delete {parsnips_dir}: {e}")
-                        self._abort()
-                parsnips_dir.mkdir(exist_ok=True)
+            for file in files:
+                full_path = Path(root) / file
+                rel_path = full_path.relative_to(self.repo_root)
+                if file.endswith('.py') and (not ignore_spec or not ignore_spec.match_file(str(rel_path))):
+                    self._process_file(full_path)
 
-                for py_file in py_files:
-                    self._process_file(Path(root) / py_file, parsnips_dir)
 
     def _process_file(self, file_path: Path, output_dir=None, force_parsnips_dir=False):
+        self.current_file = file_path
         self.logger.info(f"Parsnips extracting: `{file_path}`")
         parent_dir = file_path.parent
 
@@ -68,18 +84,25 @@ class ParsnipsExtractor:
             self.logger.error(f"AST parsing failed for {file_path}: {e}")
             self._abort()
 
-        file_swhid = self.compute_swhid(code)
-        out_path = output_dir / f"parsnips__{file_path.stem}__{file_path.suffix.lstrip('.')}"
-        out_path.mkdir(exist_ok=True)
+        file_swhid = Swhid.compute_content_swhid(code)
+        assert self.repo_root is not None
+        out_path = self.get_output_dir_for_file(self.repo_root, file_path)
+        out_path.mkdir(parents=True, exist_ok=True)
 
         self.traversal_counter = 0
         self._extract_node(atok, atok.tree, out_path, file_swhid, parent_lineno=0)
 
-    def compute_swhid(self, content_string):
-        content_bytes = content_string.encode("utf-8")
-        digest = hashlib.blake2s(content_bytes, digest_size=32).hexdigest()
-        swhid = f"swh:1:cnt:{digest}"
-        return swhid
+
+    def get_output_dir_for_file(self, repo_root: Path, file_path: Path) -> Path:
+        relative = file_path.relative_to(repo_root)
+        path = repo_root / '.parsnips'
+        for part in relative.parts[:-1]:
+            path = path / f"pdir_{part}"
+        stem = file_path.stem
+        ext = file_path.suffix.lstrip('.') or 'txt'
+        safe_stem = re.sub(r'[^A-Za-z0-9_-]', '_', stem)
+        path = path / f"pfile_{safe_stem}_{ext}"
+        return path
 
     def _extract_node(self, atok, node, parent_path, file_swhid, parent_lineno):
         self.traversal_counter += 1
@@ -100,6 +123,7 @@ class ParsnipsExtractor:
         except Exception:
             node_text = "<source unavailable>"
 
+        assert self.repo_root is not None
         metadata = {
             'type': node_type,
             'label': node_label,
@@ -107,7 +131,9 @@ class ParsnipsExtractor:
             'lineno': lineno,
             'effective_lineno': effective_lineno,
             'col_offset': col_offset,
-            'file_swhid': file_swhid
+            'file_swhid': file_swhid,
+            'source_path': str(self.current_file.relative_to(self.repo_root)),
+            'source_filename': self.current_file.name
         }
 
         with (node_path / 'node_metadata.json').open('w', encoding='utf-8') as f:

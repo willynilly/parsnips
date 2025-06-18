@@ -27,10 +27,10 @@ def main():
     parser.add_argument('--ref-name', type=str, help='Reference name (branch name or lightweight tag)')
     parser.add_argument('--repo-root', type=str, help='Path to the root of the local repo for relative path resolution. Defaults to current working directory.')
 
-
+    
     args = parser.parse_args()
-    input_path = Path(args.path)
-
+    
+    # setup logger
     logger = logging.getLogger("parsnips")
     logger.setLevel(logging.INFO)
 
@@ -44,17 +44,25 @@ def main():
         file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
         logger.addHandler(file_handler)
 
+    
+    input_path = Path(args.path)
+    if not input_path.exists():
+        logger.error(f"Invalid path: {input_path}")
+        sys.exit(1)
+
     if args.clean:
-        for root, dirs, _ in os.walk(input_path, topdown=True):
-            for d in dirs:
-                if d == '.parsnips':
-                    parsnips_dir = Path(root) / d
-                    try:
-                        shutil.rmtree(parsnips_dir)
-                        logger.info(f"Deleted: {parsnips_dir}")
-                    except Exception as e:
-                        logger.warning(f"Failed to delete {parsnips_dir}: {e}")
+        root_path = input_path if input_path.is_dir() else input_path.parent
+        parsnips_dir = root_path / '.parsnips'
+        if parsnips_dir.exists():
+            try:
+                shutil.rmtree(parsnips_dir)
+                logger.info(f"Deleted: {parsnips_dir}")
+            except Exception as e:
+                logger.warning(f"Failed to delete {parsnips_dir}: {e}")
+        else:
+            logger.info(f"No .parsnips directory found at: {parsnips_dir}")
         sys.exit(0)
+
 
     if args.search:
         context_qualifiers: dict | None = None
@@ -75,7 +83,7 @@ def main():
         repo_root = args.repo_root or os.getcwd()
 
         searcher = ParsnipsSearcher(logger=logger, strict=args.strict, use_unicode=args.unicode, use_regex=args.regex, context_qualifiers=context_qualifiers, repo_root=repo_root)
-        results = searcher.search(path=input_path, pattern=args.search)
+        results = searcher.search(path=input_path, search_text=args.search)
         print(json.dumps(results, indent=2, sort_keys=True, ensure_ascii=False))
         sys.exit(0)
 

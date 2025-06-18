@@ -4,9 +4,11 @@ Generate, search, and cite SWHIDs for Python code fragments like classes, functi
 
 ## Overview
 
-**Parsnips** is a Python tool that analyzes source files to create a citable hierarchy of folders and metadata files representing nodes in a parsed abstract syntax tree (AST). AST nodes correspond to meaningful code fragments such as classes, functions, and expressions. The metadata files and folders can be stored in your repository. If you archive your repository on Software Heritage, you can then retrieve and cite the SWHIDs for these fragments.
+**Parsnips** is a Python tool that analyzes source files to create a citable hierarchy of folders and metadata files representing nodes in a parsed abstract syntax tree (AST). AST nodes correspond to meaningful code fragments such as classes, functions, and expressions. 
 
-Parsnips uses the built-in `ast` module and `asttokens` to create fine-grained, reproducible identifiers for fragments of Python code. It is designed to support persistent software identifiers (SWHIDs) for structural code elements such as:
+The metadata files and folders can be stored in your repository. If your repository is archived on Software Heritage, you can retrieve and cite the SWHIDs for these fragments. This tool allows you to search for SWHIDs, including the qualified SWHIDs archived on Software Heritage. 
+
+Parsnips uses the built-in `ast` module and `asttokens` to generate reproducible identifiers (SWHIDs) for:
 
 - Functions
 - Classes
@@ -14,225 +16,325 @@ Parsnips uses the built-in `ast` module and `asttokens` to create fine-grained, 
 - Expressions
 - Other AST nodes
 
-The resulting parse tree is exported into a fully deterministic folder structure, where each node:
-
-- Is stored in a dedicated folder inside a hidden `.parsnips` directory.
-- Contains the exact source text corresponding to the node.
-- Includes structured metadata for precise archival referencing.
+Each node is represented by a metadata file stored inside a `.parsnips/` directory.
 
 ## Extraction Protocol
 
-When Parsnips processes a Python file or directory, it follows this deterministic protocol:
+### 1. Directory vs. File Input
 
-1. **Unified Extraction Root**:
+- When run on a **directory**, Parsnips creates a unified `.parsnips/` directory in the root and recursively processes all `.py` files.
+- When run on a **file**, it creates a `.parsnips/` folder adjacent to the file and processes only that file.
 
-   - Regardless of whether you provide a file or directory as input, Parsnips always creates a `.parsnips/` subdirectory inside the directory where the file or directory resides.
-   - This ensures a fully consistent and predictable output structure.
+### 2. Directory Traversal
 
-2. **Recursive Directory Traversal (when processing directories):**
+- Traverses all subdirectories unless ignored by `.parsnipsignore`.
+- Skips `.parsnips` folders to avoid processing output.
+- Uses `pathspec` to match ignore rules from `.parsnipsignore`.
 
-   - Parsnips walks the entire directory tree starting at the input path.
-   - It identifies all `.py` files to process.
-   - Symlinks are not followed.
-   - Any pre-existing `.parsnips/` subdirectories are deleted and regenerated to ensure full reproducibility.
+### 3. File and Node Handling
 
-3. **Per-File Processing:**
+- Parses the AST using `ast` and `asttokens`.
+- Computes the file-level SWHID.
+- Recursively walks each AST node and extracts its:
+  - type (e.g., `FunctionDef`)
+  - label (e.g., name or identifier)
+  - source text
+  - line and column info
 
-   - For each Python file, Parsnips parses the Abstract Syntax Tree (AST) using `ast` and `asttokens`.
-   - The content SWHID for the entire file is computed using Python's `hashlib.blake2s()` directly, fully following the Software Heritage content SWHID specification, without external library dependencies.
+### 4. Output Folder Structure
 
-4. **Node Processing:**
+- Each processed file results in a folder:
+  ```
+  .parsnips/pdir_<subdir>/.../pfile_<filename>_<ext>/
+  ```
+- Each AST node has a folder:
+  ```
+  EL<lineno>C<col_offset>T<traversal_index>__<node_type>/
+  ```
 
-   - Each AST node is visited in traversal order.
-   - If a node lacks a line number, it inherits the nearest parent node’s line number.
-   - Each node is assigned:
-     - Its AST type (e.g., `FunctionDef`, `ClassDef`, `Assign`).
-     - A label (e.g., function name, class name, or a sanitized version of the assigned target for assignments).
-   - A deterministic folder is created for each node with the structure:
-     ```
-     L{lineno}C{col_offset}T{traversal_index}__{node_type}__{node_label}
-     ```
+### 5. Outputs per Node
 
-5. **Label Sanitization:**
+Each node folder contains:
 
-   - To ensure filesystem-safe and portable folder names, labels are strictly sanitized:
-     - Only characters `A-Z`, `a-z`, `0-9`, `_`, and `-` are allowed.
-     - All other characters (including spaces, parentheses, brackets, symbols, and punctuation) are replaced with underscores (`_`).
-
-6. **Outputs Generated:**
-
-   For each node folder, Parsnips creates one file:
-
-   ### `node_metadata.json`
-
-   - Contains structured metadata for the AST node including:
-     - `type`: The AST node type (e.g. `FunctionDef`).
-     - `label`: The unsanitized label of the node.
-     - `text`: The exact source text fragment for the node.
-     - `lineno`: The node’s declared line number (or `null` if absent).
-     - `effective_lineno`: The inherited line number after normalization.
-     - `col_offset`: The column offset of the node.
-     - `file_swhid`: The SWHID of the full source file.
-
-7. **Directory Structure:**
-
-   - The extraction output for each processed file is always written into:
-     ```
-     {parent_dir}/.parsnips/parsnips__{file_stem}__{file_ext}/
-     ```
-
-8. **Folder Sorting:**
-
-   - Folders are deterministically named using the inherited line number, column offset, and traversal index.
-   - Sorting is lexicographic but naturally places nodes with lower line numbers first.
+- `node_metadata.json` which contains the following structured metadata:
+  - `type`: AST node type
+  - `label`: Identifier or name (e.g., function name)
+  - `text`: Exact source text of the node
+  - `lineno`: Declared line number (or null)
+  - `effective_lineno`: Inherited line number
+  - `col_offset`: Column offset
+  - `file_swhid`: SWHID for the source file
+  - `source_path`: Path relative to repo root
+  - `source_filename`: Original filename
 
 ## Fragment-Level SWHIDs
 
-- The content SWHID for each node fragment is not generated during extraction.
-- Instead, the `node_metadata.json` file itself becomes the fragment boundary.
-- The fragment SWHID is computed as the `blake2s()` hash over the serialized `node_metadata.json` content.
-- This ensures the SWHID includes both full structural metadata and the exact source text, not just the raw source text alone.
+The `node_metadata.json` file is the fragment boundary. Its SWHID is the `blake2s()` hash over its full serialized content. This includes both structure and source content.
 
-### Fragment Identifier Semantics
+This makes SWHIDs semantically meaningful and reproducible.
 
-Parsnips fragment-level SWHIDs are based on the full serialized metadata of each AST node — including both the exact source code fragment and its structural metadata. This means:
+## Searching for Qualified SWHIDs and Citing Fragments
 
-- The identifier uniquely represents a specific code fragment in its structural context.
-- Any change to the source code, the AST structure, or even to the serialization format would change the SWHID.
-- The SWHID does not solely identify the source text — it identifies the full parsed fragment as extracted.
+You can search for SWHIDs by source code using:
 
-This design enables reproducible, semantically-rich identifiers that reflect both the code content and its structure in the parse tree.
+- `-s {literal text in source code}`
+- `-s -r {regular expression for text in source code}`
 
+You can attach SWHID context qualifiers using:
 
-## Citing Fragment-level SWHIDs with Context Qualifiers
+- `--repo-url`
+- `--commit`, `--release-name`, or `--ref-name`
 
-Parsnip creates files for each node in an abstract parse tree so that code fragments like can be cited using SWHIDs. You can cite code fragments by citing their corresponding Parsnip node_metadata.json files. 
+Parsnips can compute:
 
-Each node_metadata.json file corresponds to a node in the abstract syntax tree (AST). Like any other file, it can be cited directly using its SWHID. Like other content SWHIDs, it should cited with context qualifiers that describe its origin, anchor, and path.
+- `node_swhid_without_qualifiers`: SWHID of `node_metadata.json` without context qualifiers
+- `node_swhid_with_qualifiers`: SWHID of `node_metadata.json` with anchor and path qualifiers
 
-You can use the Parsnip CLI to search for code fragments in AST nodes and their corresponding node SWHIDs. You can also discover the SWHID of the source code file which the node was parsed. 
+## Ignoring Files and Folders
 
-For example:
+Parsnips supports a `.parsnipsignore` file using `.gitignore`-style rules.
 
-- Release SWHID (e.g., the SWHID for an annotated tag):
-  ```
-  swh:1:rel:abcdef1234567890abcdef1234567890abcdef12
-  ```
-- Unqualified Parsnip AST Node SWHID (identifies the node_metadata.json file that represents the AST node that contains the code fragment):
-  ```
-  swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09
-  ```
-- Qualified Parsnip AST Node SWHID (e.g., the Python App class in main.py):
-  ```
-  swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09;anchor=swh:1:rel:abcdef1234567890abcdef1234567890abcdef12;path=/src/.parsnips/parsnips__main__py/LOCOT1__Module__node/L1C0T2__ClassDef__App/node_metadata.json
-  ```
-
-*Note* Parsnips search currently only returns the Unqualified AST Node SWHID. The `node_metadata.json` files do not contain anchor qualifier information or path information relative to the anchor. In the future, the CLI will take parameters that will allow the search to create the qualified AST Node SWHID. So currently, authors must manually contrstruct the qualifiers.
- 
+Example:
+```
+tests/
+**/__pycache__/
+ignore_this.py
+```
 
 ## CLI Parameters
 
-Parsnips provides multiple command-line options:
-
-| Argument   | Description                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| path (positional argument)  | Path to Python file or directory to process (default: current directory)                                                        |
-| `-c` or `--clean`  | Delete all `.parsnips` folders recursively                                                  |
-| `-s` or `--search` | Search using a regular expression inside the `text` field of all `node_metadata.json` files |
-| `-n` or `--normalize-search` | Apply Unicode normalization (NFC) to both the search pattern and node text before regex matching. This only applies to search operations and does not affect extraction. Extraction always preserves exact byte content for archival integrity. |
-| `-q` or `--quiet`  | Suppress console output                                                                     |
-| `-l` or `--logfile`    | Write logs to specified JSON file                                                                     |
-| `--strict` | Fail immediately on first error or missing .parsnips folder                                                            |
+| Argument | Description |
+|----------|-------------|
+| `path` (positional) | Path to file or directory (default: current directory) |
+| `-c`, `--clean` | Delete the `.parsnips` folder |
+| `-s`, `--search` | Regular expression to search within node texts |
+| `-u`, `--unicode` | Normalize search pattern and source code (Unicode NFC) |
+| `-r`, `--regex` | Interpret the search string as a regular expression |
+| `-q`, `--quiet` | Suppress logs to stdout |
+| `-l`, `--logfile` | Write logs to specified JSON file |
+| `--strict` | Abort on first error or missing `.parsnips` folder |
+| `--repo-url` | Repository origin URL (for qualified SWHID generation) |
+| `--commit` | Commit SHA (if known) |
+| `--release-name` | Release name (annotated tag) |
+| `--ref-name` | Branch or lightweight tag |
+| `--repo-root` | Path to the root of the local repo (default: cwd) |
 
 ## Example Usage
 
-### Process a directory recursively:
-
+Extract:
 ```bash
-parsnips path/to/my/project
+parsnips my_project/
 ```
 
-- This will recursively process all `.py` files under `path/to/my/project`, generate `.parsnips/` directories for each directory containing Python files, and populate these directories with metadata files for the extracted fragment-level outputs.
-
-### Process a single file:
-
+Search:
 ```bash
-parsnips path/to/file.py
+parsnips my_project/ --search "def hello_world"
 ```
 
-- This will process only the single file `file.py` and output results to:
+### Example Search Output
 
-```bash
-path/to/.parsnips/parsnips__file__py/
-```
+#### 1. Basic Search Without Repository Context
 
-#### Example Input file `example.py`:
-
+Suppose you have the following `my_project/src/hello_world.py` file:
 ```python
-class MyClass:
-    def foo(self, x, y=(1, 2)):
-        return x * y[0]
 
-result = MyClass().foo(10)
+# my first function
+def hello_world():
+  print("hello world")
+
+hello_world()
+
+# my first class
+class HelloWorld:
+  def __init__(self, msg):
+    self.msg = msg
+  
+  def print(self):
+    print(self.msg)
+
+h = HelloWorld(msg="Hello World!")
+h.print()
+
+
 ```
 
-#### Example Output structure:
+If you run:
 
 ```bash
-.parsnips/parsnips__example__py/
-  L1C0T1__ClassDef__MyClass/
-    L2C4T2__FunctionDef__foo/
-      L3C8T3__Return__node/
-  L5C0T4__Assign__result_MyClass__foo_10/
+parsnips my_project/ --search "def hello_world"
 ```
 
-### Search for the SWHID of a code fragment by using regular expressions for the source code fragment
-
-You can use Parsnips to search for the SWHID of a code fragment by using regular expressions that match on the text of the code fragment.
-
-#### Example Search Usage
-
-Suppose you have already extracted a directory and want to search for any AST nodes containing `"hello world"`.
-
-Run:
-
+or 
 ```bash
-parsnips path/to/my/project --search "hello world"
+cd my_project
+parsnips --search "def hello_world"
 ```
 
-Example output:
+You should see output like:
 
 ```json
 {
-  ".parsnips/parsnips__example__py/L8C4T7__Return__node/node_metadata.json": {
-    "node_swhid": "swh:1:cnt:1234567890abcdef1234567890abcdef12345678",
+  ".parsnips/pdir_src/pfile_hello_world_py/EL0C0T1__Module/EL1C0T2__FunctionDef/node_metadata.json": {
     "node_metadata": {
-      "type": "Return",
-      "label": "node",
-      "text": "return \"hello world\"",
-      "lineno": 8,
-      "effective_lineno": 8,
-      "col_offset": 4,
-      "file_swhid": "swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12"
-    }
-  },
-  ".parsnips/parsnips__example__py/L9C0T8__Constant__hello_world/node_metadata.json": {
-    "node_swhid": "swh:1:cnt:fedcba0987654321fedcba0987654321fedcba09",
-    "node_metadata": {
-      "type": "Constant",
-      "label": "hello world",
-      "text": "\"hello world\"",
-      "lineno": 9,
-      "effective_lineno": 9,
       "col_offset": 0,
-      "file_swhid": "swh:1:cnt:abcdef1234567890abcdef1234567890abcdef12"
-    }
+      "effective_lineno": 1,
+      "file_swhid": "swh:1:cnt:beb39a0824cd8504eefa2547d55db6c80c07ab35344656e355418da04902aff9",
+      "label": "hello_world",
+      "lineno": 1,
+      "source_filename": "hello_world.py",
+      "source_path": "src/hello_world.py",
+      "text": "def hello_world():\n  print(\"hello world\")",
+      "type": "FunctionDef"
+    },
+    "node_swhid_with_qualifiers": null,
+    "node_swhid_without_qualifiers": "swh:1:cnt:461e590204211379f783d56f790f596c5352e26df74e8c566677054c66005a94",
+    "search_regex_match_groups": null,
+    "search_text": "def hello_world",
+    "search_used_regex": false,
+    "search_used_unicode": false
+  },
+  ".parsnips/pdir_src/pfile_hello_world_py/EL0C0T1__Module/node_metadata.json": {
+    "node_metadata": {
+      "col_offset": 0,
+      "effective_lineno": 0,
+      "file_swhid": "swh:1:cnt:beb39a0824cd8504eefa2547d55db6c80c07ab35344656e355418da04902aff9",
+      "label": "node",
+      "lineno": null,
+      "source_filename": "hello_world.py",
+      "source_path": "src/hello_world.py",
+      "text": "def hello_world():\n  print(\"hello world\")\n\nhello_world()\n\n# my first class\nclass HelloWorld:\n  def __init__(self, msg):\n    self.msg = msg\n  \n  def print(self):\n    print(self.msg)\n\nh = HelloWorld(msg=\"Hello World!\")\nh.print()",
+      "type": "Module"
+    },
+    "node_swhid_with_qualifiers": null,
+    "node_swhid_without_qualifiers": "swh:1:cnt:f059936a0c56e2f5adc01f3f64d12017ab3f44b07c7d74a9c78815ec9a43229d",
+    "search_regex_match_groups": null,
+    "search_text": "def hello_world",
+    "search_used_regex": false,
+    "search_used_unicode": false
   }
 }
 ```
 
-If run with `--strict` mode and `.parsnips` folders are missing, the command will fail instead of silently returning empty results.
+#### 2. Search With Repository Context
 
+If you run:
+
+```bash
+parsnips my_project/ --search "def hello_world" \
+  --repo-url https://github.com/example/repo \
+  --commit a1b2c3d4e5
+```
+
+You might see output like:
+
+```json
+{
+  ".parsnips/pdir_src/pfile_hello_world_py/EL0C0T1__Module/EL1C0T2__FunctionDef/node_metadata.json": {
+    "node_metadata": {
+      "col_offset": 0,
+      "effective_lineno": 1,
+      "file_swhid": "swh:1:cnt:beb39a0824cd8504eefa2547d55db6c80c07ab35344656e355418da04902aff9",
+      "label": "hello_world",
+      "lineno": 1,
+      "source_filename": "hello_world.py",
+      "source_path": "src/hello_world.py",
+      "text": "def hello_world():\n  print(\"hello world\")",
+      "type": "FunctionDef"
+    },
+    "node_swhid_without_qualifiers": "swh:1:cnt:a9c3f8e9dabb93c0f89c3e9278d1f3b29b60f7d8e624fcf8f1764a2b3a2fc213",
+    "node_swhid_with_qualifiers": "swh:1:cnt:a9c3f8e9dabb93c0f89c3e9278d1f3b29b60f7d8e624fcf8f1764a2b3a2fc213;origin=https://github.com/example/repo;anchor=swh:1:rev:a1b2c3d4e5;path=/src/hello.py",
+    "search_pattern": "def hello_world",
+    "search_regex_match_groups": null,
+    "search_used_regex": false,
+    "search_used_unicode": false
+  },
+  ".parsnips/pdir_src/pfile_hello_world_py/EL0C0T1__Module/node_metadata.json": {
+    "node_metadata": {
+      "col_offset": 0,
+      "effective_lineno": 0,
+      "file_swhid": "swh:1:cnt:beb39a0824cd8504eefa2547d55db6c80c07ab35344656e355418da04902aff9",
+      "label": "node",
+      "lineno": null,
+      "source_filename": "hello_world.py",
+      "source_path": "src/hello_world.py",
+      "text": "def hello_world():\n  print(\"hello world\")\n\nhello_world()\n\n# my first class\nclass HelloWorld:\n  def __init__(self, msg):\n    self.msg = msg\n  \n  def print(self):\n    print(self.msg)\n\nh = HelloWorld(msg=\"Hello World!\")\nh.print()",
+      "type": "Module"
+    },
+    "node_swhid_without_qualifiers": "swh:1:cnt:f2ae6724c3a37e63cfed7ff3eae8a7f835f11f8be9f9f70b8dc67cc313a9cb11",
+    "node_swhid_with_qualifiers": "swh:1:cnt:f2ae6724c3a37e63cfed7ff3eae8a7f835f11f8be9f9f70b8dc67cc313a9cb11;origin=https://github.com/example/repo;anchor=swh:1:rev:a1b2c3d4e5;path=/src/hello.py",
+    "search_pattern": "def hello_world",
+    "search_regex_match_groups": null,
+    "search_used_regex": false,
+    "search_used_unicode": false
+  }
+}
+```
+
+#### 3. Search With Repository Context AND Regular Expression with Group Name
+
+If you run:
+
+```bash
+parsnips my_project/ --search "def (?P<funcname>hello\\w+)" \
+  --repo-url https://github.com/example/repo \
+  --commit a1b2c3d4e5
+```
+
+You might see output like:
+
+```json
+{
+  ".parsnips/pdir_src/pfile_hello_world_py/EL0C0T1__Module/EL1C0T2__FunctionDef/node_metadata.json": {
+    "node_metadata": {
+      "col_offset": 0,
+      "effective_lineno": 1,
+      "file_swhid": "swh:1:cnt:beb39a0824cd8504eefa2547d55db6c80c07ab35344656e355418da04902aff9",
+      "label": "hello_world",
+      "lineno": 1,
+      "source_filename": "hello_world.py",
+      "source_path": "src/hello_world.py",
+      "text": "def hello_world():\n  print(\"hello world\")",
+      "type": "FunctionDef"
+    },
+    "node_swhid_without_qualifiers": "swh:1:cnt:a9c3f8e9dabb93c0f89c3e9278d1f3b29b60f7d8e624fcf8f1764a2b3a2fc213",
+    "node_swhid_with_qualifiers": "swh:1:cnt:a9c3f8e9dabb93c0f89c3e9278d1f3b29b60f7d8e624fcf8f1764a2b3a2fc213;origin=https://github.com/example/repo;anchor=swh:1:rev:a1b2c3d4e5;path=/src/hello.py",
+    "search_regex_match_groups": {
+      "funcname": "hello_world"
+    },
+    "search_text": "def (?P<funcname>hello\\w+)",
+    "search_used_regex": true,
+    "search_used_unicode": false
+  },
+  ".parsnips/pdir_src/pfile_hello_world_py/EL0C0T1__Module/node_metadata.json": {
+    "node_metadata": {
+      "col_offset": 0,
+      "effective_lineno": 0,
+      "file_swhid": "swh:1:cnt:beb39a0824cd8504eefa2547d55db6c80c07ab35344656e355418da04902aff9",
+      "label": "node",
+      "lineno": null,
+      "source_filename": "hello_world.py",
+      "source_path": "src/hello_world.py",
+      "text": "def hello_world():\n  print(\"hello world\")\n\nhello_world()\n\n# my first class\nclass HelloWorld:\n  def __init__(self, msg):\n    self.msg = msg\n  \n  def print(self):\n    print(self.msg)\n\nh = HelloWorld(msg=\"Hello World!\")\nh.print()",
+      "type": "Module"
+    },
+    "node_swhid_without_qualifiers": "swh:1:cnt:f2ae6724c3a37e63cfed7ff3eae8a7f835f11f8be9f9f70b8dc67cc313a9cb11",
+    "node_swhid_with_qualifiers": "swh:1:cnt:f2ae6724c3a37e63cfed7ff3eae8a7f835f11f8be9f9f70b8dc67cc313a9cb11;origin=https://github.com/example/repo;anchor=swh:1:rev:a1b2c3d4e5;path=/src/hello.py",
+    "search_regex_match_groups": {
+      "funcname": "hello_world"
+    },
+    "search_text": "def (?P<funcname>hello\\w+)",
+    "search_used_regex": true,
+    "search_used_unicode": false
+  }
+}
+```
+
+**Note** If run with `--strict` mode and a `.parsnips` folder is missing, the command will fail instead of silently returning empty results.
+
+Clean:
+```
+parsnips my_project/ --clean
+```
 
 ## Licensing
 

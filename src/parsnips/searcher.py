@@ -30,14 +30,16 @@ class ParsnipsSearcher:
         return unicodedata.normalize("NFC", text)
     
     
-    def search(self, path, pattern):
+    def search(self, path: Path, search_text:str):
         results = {}
 
         if self.use_unicode:
-            pattern = self.normalize_unicode(pattern)
+            search_text = self.normalize_unicode(search_text)
 
-        if not self.use_regex:
-            pattern = regex.escape(pattern)
+        if self.use_regex:
+            pattern = search_text
+        else:
+            pattern = regex.escape(search_text)
 
         try:
             regex_compiled = regex.compile(pattern)
@@ -93,7 +95,7 @@ class ParsnipsSearcher:
                                         regex_match_groups = match.groupdict() or None
 
                                         results[rel_path] = {
-                                            "search_pattern": pattern,
+                                            "search_text": search_text, # either a literal or a regex pattern
                                             "search_used_regex": self.use_regex,
                                             "search_used_unicode": self.use_unicode,
                                             "search_regex_match_groups": regex_match_groups,
