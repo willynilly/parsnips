@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "swhid",
+    "text": "swhid",
+    "lineno": 11,
+    "effective_lineno": 11,
+    "col_offset": 15,
+    "file_swhid": "swh:1:cnt:dd0650de7ef51c4f806d7d462cce0e0342f64853aa85f6380787cbc7602ae500",
+    "source_path": "src/parsnips/swhid.py",
+    "source_filename": "swhid.py"
+}

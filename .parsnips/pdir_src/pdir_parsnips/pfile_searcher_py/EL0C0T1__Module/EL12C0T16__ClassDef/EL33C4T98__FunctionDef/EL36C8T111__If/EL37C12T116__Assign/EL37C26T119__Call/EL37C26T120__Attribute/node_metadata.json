@@ -1,0 +1,11 @@
+{
+    "type": "Attribute",
+    "label": "normalize_unicode",
+    "text": "self.normalize_unicode",
+    "lineno": 37,
+    "effective_lineno": 37,
+    "col_offset": 26,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

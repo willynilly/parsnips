@@ -1,0 +1,11 @@
+{
+    "type": "Call",
+    "label": "node",
+    "text": "ParsnipsSearcher(logger=logger, strict=args.strict, use_unicode=args.unicode, use_regex=args.regex, context_qualifiers=context_qualifiers, repo_root=repo_root)",
+    "lineno": 85,
+    "effective_lineno": 85,
+    "col_offset": 19,
+    "file_swhid": "swh:1:cnt:63586c3cb1a84cd4d5248521454387723066e050089f3871653bac2addff3334",
+    "source_path": "src/parsnips/main.py",
+    "source_filename": "main.py"
+}

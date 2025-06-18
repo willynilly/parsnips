@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "__init__",
+    "text": "    def __init__(self, repo_url=None, commit=None, release_name=None, ref_name=None, visit=None):\n        self.repo_url = repo_url\n        self.commit = commit\n        self.release_name = release_name\n        self.ref_name = ref_name\n        self.visit = visit  # optional snapshot ID\n        self.snapshot_id = None\n        self.anchor_swhid = None",
+    "lineno": 9,
+    "effective_lineno": 9,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:5b1c9b354784f96cfb13d405f9aed721ce05b84f8f44451d75324fdef86fdba3",
+    "source_path": "src/parsnips/swh_context.py",
+    "source_filename": "swh_context.py"
+}

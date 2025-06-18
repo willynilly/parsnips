@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "lookup_ref",
+    "text": "    def lookup_ref(self) -> str | None:\n        if self.repo_url is None:\n            return None\n        \n        snapshot: dict | None = self.get_snapshot_object()\n        if snapshot is None:\n            return None\n        \n        branches = snapshot.get('branches', {})\n        if self.ref_name not in branches:\n            raise ValueError(f\"Ref {self.ref_name} not found in snapshot.\")\n        rev_id = branches[self.ref_name]['target']['id']\n        self.anchor_swhid = rev_id\n        return rev_id",
+    "lineno": 100,
+    "effective_lineno": 100,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:5b1c9b354784f96cfb13d405f9aed721ce05b84f8f44451d75324fdef86fdba3",
+    "source_path": "src/parsnips/swh_context.py",
+    "source_filename": "swh_context.py"
+}

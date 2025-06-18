@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "process",
+    "text": "    def process(self, input_path: Path):\n        input_path = Path(input_path).resolve()\n        if not self.repo_root:\n            self.repo_root = input_path if input_path.is_dir() else input_path.parent\n\n        if input_path.is_file():\n            self._process_file(input_path, force_parsnips_dir=True)\n        elif input_path.is_dir():\n            self._process_directory(input_path)\n        else:\n            self.logger.error(f\"Invalid path: {input_path}\")\n            self._abort()",
+    "lineno": 20,
+    "effective_lineno": 20,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:7d7f9763c68ed4e87e39a43c55e678cc521403782263666b937bb7581e2b1a37",
+    "source_path": "src/parsnips/extractor.py",
+    "source_filename": "extractor.py"
+}

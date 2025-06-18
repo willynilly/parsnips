@@ -1,0 +1,11 @@
+{
+    "type": "Try",
+    "label": "node",
+    "text": "        try:\n            regex_compiled = regex.compile(pattern)\n        except regex.error as e:\n            self.logger.error(f\"Invalid regular expression: {e}\")\n            sys.exit(1)",
+    "lineno": 44,
+    "effective_lineno": 44,
+    "col_offset": 8,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

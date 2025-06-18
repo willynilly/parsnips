@@ -1,0 +1,11 @@
+{
+    "type": "Call",
+    "label": "node",
+    "text": "any(\"FunctionDef\" in folder.name for folder in node_dirs)",
+    "lineno": 42,
+    "effective_lineno": 42,
+    "col_offset": 16,
+    "file_swhid": "swh:1:cnt:3717580893d369161518e636ba6bda46b3f3b4807efc67003b0b416f48384be9",
+    "source_path": "tests/test_extractor.py",
+    "source_filename": "test_extractor.py"
+}

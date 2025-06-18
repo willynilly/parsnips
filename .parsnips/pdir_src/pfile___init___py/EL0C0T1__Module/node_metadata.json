@@ -1,0 +1,11 @@
+{
+    "type": "Module",
+    "label": "node",
+    "text": "",
+    "lineno": null,
+    "effective_lineno": 0,
+    "col_offset": 0,
+    "file_swhid": "swh:1:cnt:69217a3079908094e11121d042354a7c1f55b6482ca1a51e1b250dfd1ed0eef9",
+    "source_path": "src/__init__.py",
+    "source_filename": "__init__.py"
+}

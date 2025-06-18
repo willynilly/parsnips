@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "Swhid",
+    "text": "Swhid",
+    "lineno": 19,
+    "effective_lineno": 19,
+    "col_offset": 21,
+    "file_swhid": "swh:1:cnt:a33c8d87720eddcd880ff5f73220a4987efe953e2c61f6827c310b00b4aa1f96",
+    "source_path": "tests/test_compute_swhid.py",
+    "source_filename": "test_compute_swhid.py"
+}

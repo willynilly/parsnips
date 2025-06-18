@@ -1,0 +1,11 @@
+{
+    "type": "Expr",
+    "label": "node",
+    "text": "self._abort()",
+    "lineno": 85,
+    "effective_lineno": 85,
+    "col_offset": 12,
+    "file_swhid": "swh:1:cnt:7d7f9763c68ed4e87e39a43c55e678cc521403782263666b937bb7581e2b1a37",
+    "source_path": "src/parsnips/extractor.py",
+    "source_filename": "extractor.py"
+}

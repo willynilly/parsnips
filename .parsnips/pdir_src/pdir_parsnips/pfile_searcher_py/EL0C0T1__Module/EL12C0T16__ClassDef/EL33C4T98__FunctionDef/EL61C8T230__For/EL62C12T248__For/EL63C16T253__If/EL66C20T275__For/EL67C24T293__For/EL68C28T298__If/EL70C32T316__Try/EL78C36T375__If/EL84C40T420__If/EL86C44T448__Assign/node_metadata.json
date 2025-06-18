@@ -1,0 +1,11 @@
+{
+    "type": "Assign",
+    "label": "node_swhid_with_qualifiers",
+    "text": "node_swhid_with_qualifiers = (\n                                                f\"{node_swhid_without_qualifiers}\"\n                                                f\";anchor={self.context_qualifiers['anchor']}\"\n                                                f\";path=/{path_qual}\"\n                                            )",
+    "lineno": 86,
+    "effective_lineno": 86,
+    "col_offset": 44,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

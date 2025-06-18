@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "parser",
+    "text": "parser",
+    "lineno": 25,
+    "effective_lineno": 25,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:63586c3cb1a84cd4d5248521454387723066e050089f3871653bac2addff3334",
+    "source_path": "src/parsnips/main.py",
+    "source_filename": "main.py"
+}

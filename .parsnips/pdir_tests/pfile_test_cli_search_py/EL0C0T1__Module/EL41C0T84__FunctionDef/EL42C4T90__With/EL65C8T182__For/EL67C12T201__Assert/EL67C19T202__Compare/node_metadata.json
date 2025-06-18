@@ -1,0 +1,11 @@
+{
+    "type": "Compare",
+    "label": "node",
+    "text": "\"node_swhid_without_qualifiers\" in data",
+    "lineno": 67,
+    "effective_lineno": 67,
+    "col_offset": 19,
+    "file_swhid": "swh:1:cnt:f1a3ac9ae63413c7e3028ca66a59cfc676419d56ca07eef51db45f17199ab05c",
+    "source_path": "tests/test_cli_search.py",
+    "source_filename": "test_cli_search.py"
+}

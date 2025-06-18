@@ -1,0 +1,11 @@
+{
+    "type": "For",
+    "label": "node",
+    "text": "        for root, dirs, files in os.walk(directory, topdown=True, followlinks=False):\n            # Remove ignored directories\n            if ignore_spec:\n                dirs[:] = [d for d in dirs if not ignore_spec.match_file(os.path.relpath(os.path.join(root, d), self.repo_root))]\n            else:\n                dirs[:] = [d for d in dirs if d != '.parsnips']\n\n            for file in files:\n                full_path = Path(root) / file\n                rel_path = full_path.relative_to(self.repo_root)\n                if file.endswith('.py') and (not ignore_spec or not ignore_spec.match_file(str(rel_path))):\n                    self._process_file(full_path)",
+    "lineno": 46,
+    "effective_lineno": 46,
+    "col_offset": 8,
+    "file_swhid": "swh:1:cnt:7d7f9763c68ed4e87e39a43c55e678cc521403782263666b937bb7581e2b1a37",
+    "source_path": "src/parsnips/extractor.py",
+    "source_filename": "extractor.py"
+}

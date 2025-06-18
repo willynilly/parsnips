@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "test_precise_search_functionality",
+    "text": "def test_precise_search_functionality(extractor, searcher, logger, sample_python_code):\n    with tempfile.TemporaryDirectory() as tmpdir:\n        file_path = Path(tmpdir) / \"example.py\"\n        file_path.write_text(sample_python_code, encoding=\"utf-8\")\n\n        # Extract the file\n        extractor.process(file_path)\n\n        # Perform search\n        base_dir = Path(tmpdir)\n        pattern = 'hello world'\n        results = searcher.search(base_dir, pattern)\n\n        # Build expectations as tuples of (type, label)\n        expected_nodes = {\n            (\"Module\", \"node\"),\n            (\"ClassDef\", \"AnotherClass\"),\n            (\"FunctionDef\", \"bar\"),\n            (\"Return\", \"node\"),\n            (\"Constant\", \"hello world\"),\n        }\n\n        found_nodes = set()\n\n        for rel_path, data in results.items():\n            assert rel_path.endswith(\"node_metadata.json\")\n            assert \"node_swhid_without_qualifiers\" in data\n            assert \"node_metadata\" in data\n\n            node_meta = data[\"node_metadata\"]\n            found_nodes.add((node_meta[\"type\"], node_meta[\"label\"]))\n\n            # Verify that \"hello world\" exists in node text\n            assert pattern in node_meta[\"text\"]\n\n            # Independently recompute SWHID and verify\n            metadata_str = json.dumps(node_meta, sort_keys=True, ensure_ascii=False)\n            expected_swhid = Swhid.compute_content_swhid(metadata_str)\n            assert data[\"node_swhid_without_qualifiers\"] == expected_swhid\n\n        # Finally, ensure all expected nodes were found\n        assert found_nodes == expected_nodes",
+    "lineno": 41,
+    "effective_lineno": 41,
+    "col_offset": 0,
+    "file_swhid": "swh:1:cnt:f1a3ac9ae63413c7e3028ca66a59cfc676419d56ca07eef51db45f17199ab05c",
+    "source_path": "tests/test_cli_search.py",
+    "source_filename": "test_cli_search.py"
+}

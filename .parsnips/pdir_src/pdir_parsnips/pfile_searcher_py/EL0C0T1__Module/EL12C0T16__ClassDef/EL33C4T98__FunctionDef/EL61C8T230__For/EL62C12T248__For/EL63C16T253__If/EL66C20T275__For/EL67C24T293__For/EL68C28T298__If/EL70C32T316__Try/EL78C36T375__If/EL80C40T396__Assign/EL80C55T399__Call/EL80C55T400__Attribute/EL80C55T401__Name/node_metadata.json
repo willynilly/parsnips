@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "json",
+    "text": "json",
+    "lineno": 80,
+    "effective_lineno": 80,
+    "col_offset": 55,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

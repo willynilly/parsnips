@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "lookup_anchor",
+    "text": "    def lookup_anchor(self) -> str | None:\n        \"\"\"\n        Resolve the appropriate SWH anchor based on user-provided inputs.\n\n        Priority order:\n        1. --commit        → revision SWHID\n        2. --release-name  → release SWHID\n        3. --ref-name      → branch or lightweight tag → revision SWHID\n\n        Returns:\n            str: anchor SWHID (swh:1:rev:... or swh:1:rel:...)\n\n        Raises:\n            ValueError if none of the inputs are sufficient to resolve an anchor.\n        \"\"\"\n        if self.repo_url is None:\n            raise ValueError(\"Repository URL is required to resolve an anchor.\")\n\n        # Always ensure snapshot context is loaded before anchor resolution\n        if not self.snapshot_id:\n            self.lookup_snapshot()\n\n        # 1. Priority: resolve revision via commit\n        if self.commit:\n            return self.lookup_revision_from_commit()\n\n        # 2. Next: resolve release via release name (annotated tag)\n        if self.release_name:\n            return self.lookup_release()\n\n        # 3. Last: resolve revision via ref (branch name or lightweight tag)\n        if self.ref_name:\n            return self.lookup_ref()\n\n        # 4. Fail if no qualifying context is provided\n        raise ValueError(\n            \"Unable to resolve anchor: provide at least one of --commit, --release-name, or --ref-name.\"\n        )",
+    "lineno": 33,
+    "effective_lineno": 33,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:5b1c9b354784f96cfb13d405f9aed721ce05b84f8f44451d75324fdef86fdba3",
+    "source_path": "src/parsnips/swh_context.py",
+    "source_filename": "swh_context.py"
+}

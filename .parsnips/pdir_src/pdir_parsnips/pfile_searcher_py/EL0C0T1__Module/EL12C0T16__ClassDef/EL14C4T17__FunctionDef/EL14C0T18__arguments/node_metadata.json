@@ -1,0 +1,11 @@
+{
+    "type": "arguments",
+    "label": "node",
+    "text": "self,\n                 logger,\n                 context_qualifiers: dict | None = None,\n                 repo_root: str | None = None,  \n                 use_unicode=False,\n                 use_regex=False, \n                 strict=False",
+    "lineno": null,
+    "effective_lineno": 14,
+    "col_offset": 0,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

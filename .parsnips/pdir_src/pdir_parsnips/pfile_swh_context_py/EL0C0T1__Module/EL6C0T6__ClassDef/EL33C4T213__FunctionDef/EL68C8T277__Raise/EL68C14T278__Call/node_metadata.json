@@ -1,0 +1,11 @@
+{
+    "type": "Call",
+    "label": "node",
+    "text": "ValueError(\n            \"Unable to resolve anchor: provide at least one of --commit, --release-name, or --ref-name.\"\n        )",
+    "lineno": 68,
+    "effective_lineno": 68,
+    "col_offset": 14,
+    "file_swhid": "swh:1:cnt:5b1c9b354784f96cfb13d405f9aed721ce05b84f8f44451d75324fdef86fdba3",
+    "source_path": "src/parsnips/swh_context.py",
+    "source_filename": "swh_context.py"
+}

@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "tmpdir",
+    "text": "tmpdir",
+    "lineno": 50,
+    "effective_lineno": 50,
+    "col_offset": 24,
+    "file_swhid": "swh:1:cnt:f1a3ac9ae63413c7e3028ca66a59cfc676419d56ca07eef51db45f17199ab05c",
+    "source_path": "tests/test_cli_search.py",
+    "source_filename": "test_cli_search.py"
+}

@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "get_snapshot_object",
+    "text": "    def get_snapshot_object(self) -> dict | None:\n        if self.repo_url is None:\n            return None\n        \n        if not self.snapshot_id:\n            self.lookup_snapshot()\n        url = f\"{self.BASE_URL}/snapshot/{self.snapshot_id}/\"\n        response = requests.get(url)\n        response.raise_for_status()\n        return response.json()",
+    "lineno": 115,
+    "effective_lineno": 115,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:5b1c9b354784f96cfb13d405f9aed721ce05b84f8f44451d75324fdef86fdba3",
+    "source_path": "src/parsnips/swh_context.py",
+    "source_filename": "swh_context.py"
+}

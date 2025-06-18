@@ -1,0 +1,11 @@
+{
+    "type": "Attribute",
+    "label": "quiet",
+    "text": "args.quiet",
+    "lineno": 39,
+    "effective_lineno": 39,
+    "col_offset": 11,
+    "file_swhid": "swh:1:cnt:63586c3cb1a84cd4d5248521454387723066e050089f3871653bac2addff3334",
+    "source_path": "src/parsnips/main.py",
+    "source_filename": "main.py"
+}

@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "node_swhid_with_qualifiers",
+    "text": "node_swhid_with_qualifiers",
+    "lineno": 103,
+    "effective_lineno": 103,
+    "col_offset": 74,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

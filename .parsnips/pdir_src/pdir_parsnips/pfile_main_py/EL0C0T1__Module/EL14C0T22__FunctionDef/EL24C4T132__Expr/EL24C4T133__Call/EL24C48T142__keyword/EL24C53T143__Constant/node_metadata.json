@@ -1,0 +1,11 @@
+{
+    "type": "Constant",
+    "label": "Repository origin URL (required for context SWHID generation)",
+    "text": "'Repository origin URL (required for context SWHID generation)'",
+    "lineno": 24,
+    "effective_lineno": 24,
+    "col_offset": 53,
+    "file_swhid": "swh:1:cnt:63586c3cb1a84cd4d5248521454387723066e050089f3871653bac2addff3334",
+    "source_path": "src/parsnips/main.py",
+    "source_filename": "main.py"
+}

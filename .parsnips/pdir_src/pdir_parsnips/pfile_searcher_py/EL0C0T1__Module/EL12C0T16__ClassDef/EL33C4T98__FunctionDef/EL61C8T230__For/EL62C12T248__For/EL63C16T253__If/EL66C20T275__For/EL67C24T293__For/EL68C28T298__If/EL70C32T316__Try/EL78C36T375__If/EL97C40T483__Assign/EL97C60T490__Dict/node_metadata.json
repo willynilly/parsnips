@@ -1,0 +1,11 @@
+{
+    "type": "Dict",
+    "label": "node",
+    "text": "{\n                                            \"search_text\": search_text, # either a literal or a regex pattern\n                                            \"search_used_regex\": self.use_regex,\n                                            \"search_used_unicode\": self.use_unicode,\n                                            \"search_regex_match_groups\": regex_match_groups,\n                                            \"node_swhid_without_qualifiers\": node_swhid_without_qualifiers,\n                                            \"node_swhid_with_qualifiers\": node_swhid_with_qualifiers,\n                                            \"node_metadata\": metadata\n                                        }",
+    "lineno": 97,
+    "effective_lineno": 97,
+    "col_offset": 60,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

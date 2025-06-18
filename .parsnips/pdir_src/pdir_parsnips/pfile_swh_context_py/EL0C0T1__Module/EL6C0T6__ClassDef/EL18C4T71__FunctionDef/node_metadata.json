@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "lookup_snapshot",
+    "text": "    def lookup_snapshot(self) -> str | None:\n        if self.repo_url is None:\n            return None\n        origin_encoded = urllib.parse.quote(self.repo_url, safe='')\n        url = f\"{self.BASE_URL}/origin/{origin_encoded}/visits/\"\n        response = requests.get(url)\n        response.raise_for_status()\n        visits = response.json()['origin_visits']\n        if not visits:\n            raise ValueError(\"No visits found for origin in SWH.\")\n        latest_visit = visits[-1] if not self.visit else next(\n            v for v in visits if v['visit'] == int(self.visit))\n        self.snapshot_id = latest_visit['snapshot']\n        return self.snapshot_id",
+    "lineno": 18,
+    "effective_lineno": 18,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:5b1c9b354784f96cfb13d405f9aed721ce05b84f8f44451d75324fdef86fdba3",
+    "source_path": "src/parsnips/swh_context.py",
+    "source_filename": "swh_context.py"
+}

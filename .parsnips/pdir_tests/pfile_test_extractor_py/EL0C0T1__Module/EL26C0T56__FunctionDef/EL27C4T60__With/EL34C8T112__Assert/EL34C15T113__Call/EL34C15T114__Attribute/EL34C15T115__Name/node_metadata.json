@@ -1,0 +1,11 @@
+{
+    "type": "Name",
+    "label": "output_dir",
+    "text": "output_dir",
+    "lineno": 34,
+    "effective_lineno": 34,
+    "col_offset": 15,
+    "file_swhid": "swh:1:cnt:3717580893d369161518e636ba6bda46b3f3b4807efc67003b0b416f48384be9",
+    "source_path": "tests/test_extractor.py",
+    "source_filename": "test_extractor.py"
+}

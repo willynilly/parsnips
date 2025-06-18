@@ -1,0 +1,11 @@
+{
+    "type": "FunctionDef",
+    "label": "_extract_node",
+    "text": "    def _extract_node(self, atok, node, parent_path, file_swhid, parent_lineno):\n        self.traversal_counter += 1\n\n        lineno = getattr(node, 'lineno', None)\n        effective_lineno = lineno if lineno is not None else parent_lineno\n        col_offset = getattr(node, 'col_offset', 0)\n        traversal_index = self.traversal_counter\n\n        node_type = type(node).__name__\n        node_label = self._get_node_label(atok, node)\n        folder_name = f\"EL{effective_lineno}C{col_offset}T{traversal_index}__{node_type}\"\n        node_path = parent_path / folder_name\n        node_path.mkdir(exist_ok=True)\n\n        try:\n            node_text = atok.get_text(node)\n        except Exception:\n            node_text = \"<source unavailable>\"\n\n        assert self.repo_root is not None\n        metadata = {\n            'type': node_type,\n            'label': node_label,\n            'text': node_text,\n            'lineno': lineno,\n            'effective_lineno': effective_lineno,\n            'col_offset': col_offset,\n            'file_swhid': file_swhid,\n            'source_path': str(self.current_file.relative_to(self.repo_root)),\n            'source_filename': self.current_file.name\n        }\n\n        with (node_path / 'node_metadata.json').open('w', encoding='utf-8') as f:\n            json.dump(metadata, f, indent=4, ensure_ascii=False)\n\n        for child in ast.iter_child_nodes(node):\n            self._extract_node(atok, child, node_path, file_swhid, parent_lineno=effective_lineno)",
+    "lineno": 107,
+    "effective_lineno": 107,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:7d7f9763c68ed4e87e39a43c55e678cc521403782263666b937bb7581e2b1a37",
+    "source_path": "src/parsnips/extractor.py",
+    "source_filename": "extractor.py"
+}

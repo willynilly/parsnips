@@ -1,0 +1,11 @@
+{
+    "type": "Call",
+    "label": "node",
+    "text": "self.logger.error(\"Error: No .parsnips directories found.\")",
+    "lineno": 117,
+    "effective_lineno": 117,
+    "col_offset": 12,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}

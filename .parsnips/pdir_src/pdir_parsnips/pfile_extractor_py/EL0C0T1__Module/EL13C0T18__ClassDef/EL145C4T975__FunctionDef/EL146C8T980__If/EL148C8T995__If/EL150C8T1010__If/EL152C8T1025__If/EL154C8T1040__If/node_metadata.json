@@ -1,0 +1,11 @@
+{
+    "type": "If",
+    "label": "node",
+    "text": "        elif isinstance(node, ast.Attribute):\n            return node.attr\n        elif isinstance(node, ast.Name):\n            return node.id\n        elif isinstance(node, ast.Import):\n            return 'import'\n        elif isinstance(node, ast.ImportFrom):\n            return f'from_{node.module or \"unknown\"}'\n        elif isinstance(node, ast.Assign):\n            targets = [re.sub(r'\\s+', '', atok.get_text(t)) for t in node.targets]\n            return '_'.join(targets)\n        elif isinstance(node, ast.Lambda):\n            return 'lambda'\n        elif isinstance(node, ast.Constant):\n            return str(node.value)\n        else:\n            return 'node'",
+    "lineno": 154,
+    "effective_lineno": 154,
+    "col_offset": 8,
+    "file_swhid": "swh:1:cnt:7d7f9763c68ed4e87e39a43c55e678cc521403782263666b937bb7581e2b1a37",
+    "source_path": "src/parsnips/extractor.py",
+    "source_filename": "extractor.py"
+}

@@ -1,0 +1,11 @@
+{
+    "type": "Assign",
+    "label": "expected_swhid",
+    "text": "expected_swhid = \"swh:1:cnt:19ba7fcee22a2eded332850851070299943c2b328a37f882bbf3620ec4586939\"",
+    "lineno": 18,
+    "effective_lineno": 18,
+    "col_offset": 4,
+    "file_swhid": "swh:1:cnt:a33c8d87720eddcd880ff5f73220a4987efe953e2c61f6827c310b00b4aa1f96",
+    "source_path": "tests/test_compute_swhid.py",
+    "source_filename": "test_compute_swhid.py"
+}

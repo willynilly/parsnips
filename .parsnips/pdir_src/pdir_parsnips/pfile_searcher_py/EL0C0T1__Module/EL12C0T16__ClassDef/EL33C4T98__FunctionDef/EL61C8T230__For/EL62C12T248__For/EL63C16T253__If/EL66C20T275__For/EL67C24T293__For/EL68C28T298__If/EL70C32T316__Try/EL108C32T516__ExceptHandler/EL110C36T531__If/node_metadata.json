@@ -1,0 +1,11 @@
+{
+    "type": "If",
+    "label": "node",
+    "text": "                                    if self.strict:\n                                        self.logger.error(msg)\n                                        sys.exit(1)\n                                    else:\n                                        self.logger.warning(msg)",
+    "lineno": 110,
+    "effective_lineno": 110,
+    "col_offset": 36,
+    "file_swhid": "swh:1:cnt:2859b4782591ebc405d65df5998d21b4995fa95cc69bd30bb58dc542e1acc607",
+    "source_path": "src/parsnips/searcher.py",
+    "source_filename": "searcher.py"
+}
