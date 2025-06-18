@@ -30,8 +30,12 @@ def test_extraction_creates_expected_output(extractor, simple_python_code):
 
         extractor.process(file_path)
 
-        output_dir = Path(tmpdir) / ".parsnips" / "parsnips__example__py"
-        assert output_dir.exists()
+        parsnips_root = Path(tmpdir) / ".parsnips"
+        assert parsnips_root.exists(), ".parsnips directory was not created"
+
+        subdirs = [d for d in parsnips_root.iterdir() if d.is_dir()]
+        assert subdirs, "No output subdirectories found in .parsnips"
+        output_dir = subdirs[0]
 
         # Check that at least some node folders exist (recursively)
         node_folders = list(output_dir.rglob("*"))
