@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from parsnips.extractor import ParsnipsExtractor
-from parsnips.search import ParsnipsSearch
+from parsnips.searcher import ParsnipsSearcher
 from parsnips.swh_context import SWHContext
 
 
@@ -16,7 +16,8 @@ def main():
     parser.add_argument('path', nargs='?', default='.', help='Path to file or directory (default: current directory)')
     parser.add_argument('-c', '--clean', action='store_true', help='Recursively delete all .parsnips folders')
     parser.add_argument('-s', '--search', type=str, help='Regular expression to search within node texts')
-    parser.add_argument('-n', '--normalize-search', action='store_true', help='Apply Unicode normalization (NFC) to both the search pattern and node text before regex matching. This only applies to search operations and does not affect extraction. Extraction always preserves exact byte content for archival integrity.')
+    parser.add_argument('-u', '--unicode', action='store_true', help='Normalize search pattern and source code (Unicode NFC)')
+    parser.add_argument('-r', '--regex', action='store_true', help='Interpret the search string as a regular expression')
     parser.add_argument('-q', '--quiet', action='store_true', help='Suppress logs to stdout')
     parser.add_argument('-l', '--logfile', type=str, help='Write logs to specified JSON file')
     parser.add_argument('--strict', action='store_true', help='Abort on first error or missing .parsnips folder')
@@ -73,7 +74,7 @@ def main():
 
         repo_root = args.repo_root or os.getcwd()
 
-        searcher = ParsnipsSearch(strict=args.strict, normalize_search=args.normalize_search, context_qualifiers=context_qualifiers, repo_root=repo_root)
+        searcher = ParsnipsSearcher(logger=logger, strict=args.strict, use_unicode=args.unicode, use_regex=args.regex, context_qualifiers=context_qualifiers, repo_root=repo_root)
         results = searcher.search(path=input_path, pattern=args.search)
         print(json.dumps(results, indent=2, sort_keys=True, ensure_ascii=False))
         sys.exit(0)

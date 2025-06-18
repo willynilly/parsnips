@@ -38,8 +38,8 @@ def test_extraction_creates_expected_output(extractor, simple_python_code):
         node_dirs = [f for f in node_folders if f.is_dir()]
         assert len(node_dirs) > 0
 
-        # Look for FunctionDef__foo in any subdirectory
-        found = any("FunctionDef__foo" in folder.name for folder in node_dirs)
+        # Look for FunctionDef in any subdirectory
+        found = any("FunctionDef" in folder.name for folder in node_dirs)
         assert found
 
         # Verify node_metadata.json exists and has correct structure

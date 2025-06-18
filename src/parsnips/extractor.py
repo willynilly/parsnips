@@ -91,8 +91,7 @@ class ParsnipsExtractor:
 
         node_type = type(node).__name__
         node_label = self._get_node_label(atok, node)
-        safe_label = self._sanitize_label(node_label)
-        folder_name = f"L{effective_lineno}C{col_offset}T{traversal_index}__{node_type}__{safe_label}"
+        folder_name = f"EL{effective_lineno}C{col_offset}T{traversal_index}__{node_type}"
         node_path = parent_path / folder_name
         node_path.mkdir(exist_ok=True)
 
@@ -143,9 +142,6 @@ class ParsnipsExtractor:
             return str(node.value)
         else:
             return 'node'
-
-    def _sanitize_label(self, label: str) -> str:
-        return re.sub(r'[^A-Za-z0-9_-]', '_', label)
 
     def _abort(self):
         if self.strict:

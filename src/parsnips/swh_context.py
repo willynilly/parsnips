@@ -52,19 +52,19 @@ class SWHContext:
         if not self.snapshot_id:
             self.lookup_snapshot()
 
-        # 1️⃣ Priority: resolve revision via commit
+        # 1. Priority: resolve revision via commit
         if self.commit:
             return self.lookup_revision_from_commit()
 
-        # 2️⃣ Next: resolve release via release name (annotated tag)
+        # 2. Next: resolve release via release name (annotated tag)
         if self.release_name:
             return self.lookup_release()
 
-        # 3️⃣ Last: resolve revision via ref (branch name or lightweight tag)
+        # 3. Last: resolve revision via ref (branch name or lightweight tag)
         if self.ref_name:
             return self.lookup_ref()
 
-        # 🚨 Fail if no qualifying context is provided
+        # 4. Fail if no qualifying context is provided
         raise ValueError(
             "Unable to resolve anchor: provide at least one of --commit, --release-name, or --ref-name."
         )

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from parsnips.extractor import ParsnipsExtractor
-from parsnips.search import ParsnipsSearch
+from parsnips.searcher import ParsnipsSearcher
 from parsnips.swhid import Swhid
 
 
@@ -23,15 +23,22 @@ class AnotherClass:
         return "hello world"
 '''
 
-
 @pytest.fixture
-def extractor():
+def logger():
     logger = logging.getLogger("parsnips-test")
     logger.setLevel(logging.CRITICAL)
+    return logger
+
+@pytest.fixture
+def extractor(logger):
     return ParsnipsExtractor(logger=logger, strict=True)
 
+@pytest.fixture
+def searcher(logger):
+    return ParsnipsSearcher(logger=logger)
 
-def test_precise_search_functionality(extractor, sample_python_code):
+
+def test_precise_search_functionality(extractor, searcher, logger, sample_python_code):
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = Path(tmpdir) / "example.py"
         file_path.write_text(sample_python_code, encoding="utf-8")
@@ -42,7 +49,6 @@ def test_precise_search_functionality(extractor, sample_python_code):
         # Perform search
         base_dir = Path(tmpdir)
         pattern = 'hello world'
-        searcher = ParsnipsSearch()
         results = searcher.search(base_dir, pattern)
 
         # Build expectations as tuples of (type, label)

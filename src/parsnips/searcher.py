@@ -9,16 +9,20 @@ import regex
 from parsnips.swhid import Swhid
 
 
-class ParsnipsSearch:
+class ParsnipsSearcher:
 
-    def __init__(self,  
+    def __init__(self,
+                 logger,
                  context_qualifiers: dict | None = None,
                  repo_root: str | None = None,  
-                 normalize_search=False, 
+                 use_unicode=False,
+                 use_regex=False, 
                  strict=False):
+        self.logger = logger
         self.context_qualifiers = context_qualifiers
         self.repo_root = repo_root
-        self.normalize_search = normalize_search
+        self.use_unicode = use_unicode
+        self.use_regex = use_regex
         self.strict = strict
     
     def normalize_unicode(self, text):
@@ -26,18 +30,19 @@ class ParsnipsSearch:
         return unicodedata.normalize("NFC", text)
     
     
-
     def search(self, path, pattern):
         results = {}
 
-        # Precompile pattern optionally normalized
-        if self.normalize_search:
+        if self.use_unicode:
             pattern = self.normalize_unicode(pattern)
+
+        if not self.use_regex:
+            pattern = regex.escape(pattern)
 
         try:
             regex_compiled = regex.compile(pattern)
         except regex.error as e:
-            print(f"Invalid regular expression: {e}", file=sys.stderr)
+            self.logger.error(f"Invalid regular expression: {e}")
             sys.exit(1)
 
         # Determine starting directory
@@ -46,7 +51,7 @@ class ParsnipsSearch:
         elif path.is_dir():
             start_dir = path
         else:
-            print(f"Invalid path: {path}", file=sys.stderr)
+            self.logger.error(f"Invalid path: {path}")
             sys.exit(1)
 
         found_parsnips = False
@@ -65,9 +70,10 @@ class ParsnipsSearch:
                                         metadata = json.load(f)
 
                                     text = metadata.get("text", "")
-                                    text_to_search = self.normalize_unicode(text) if self.normalize_search else text
+                                    text_to_search = self.normalize_unicode(text) if self.use_unicode else text
 
-                                    if regex_compiled.search(text_to_search):
+                                    match = regex_compiled.search(text_to_search)
+                                    if match:
                                         rel_path = os.path.relpath(full_path, start=Path.cwd())
                                         metadata_str = json.dumps(metadata, sort_keys=True, ensure_ascii=False)
                                         node_swhid_without_qualifiers = Swhid.compute_content_swhid(metadata_str)
@@ -83,17 +89,30 @@ class ParsnipsSearch:
                                         else:
                                             node_swhid_with_qualifiers = None
 
+                                        # Extract named capture groups (or None)
+                                        regex_match_groups = match.groupdict() or None
+
                                         results[rel_path] = {
+                                            "search_pattern": pattern,
+                                            "search_used_regex": self.use_regex,
+                                            "search_used_unicode": self.use_unicode,
+                                            "search_regex_match_groups": regex_match_groups,
                                             "node_swhid_without_qualifiers": node_swhid_without_qualifiers,
                                             "node_swhid_with_qualifiers": node_swhid_with_qualifiers,
                                             "node_metadata": metadata
                                         }
 
+
                                 except Exception as e:
-                                    print(f"Error reading {full_path}: {e}", file=sys.stderr)
+                                    msg = f"Error reading {full_path}: {e}"
+                                    if self.strict:
+                                        self.logger.error(msg)
+                                        sys.exit(1)
+                                    else:
+                                        self.logger.warning(msg)
 
         if self.strict and not found_parsnips:
-            print("Error: No .parsnips directories found.", file=sys.stderr)
+            self.logger.error("Error: No .parsnips directories found.")
             sys.exit(1)
 
         return results
