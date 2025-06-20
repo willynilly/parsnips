@@ -39,5 +39,17 @@ references:
       given-names: Dmitry
     license:
     - Apache-2.0
+  - title: ijson
+    version: 3.4.0
+    authors:
+    - family-names: Tobar
+      given-names: Rodrigo
+    - family-names: Sagalaev
+      given-names: Ivan
+  - title: regex
+    version: 2024.11.6
+    authors:
+    - family-names: Barnett
+      given-names: Matthew
 
 
