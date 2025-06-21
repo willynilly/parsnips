@@ -22,7 +22,8 @@ def main():
     parser.add_argument("-r", "--regex", action="store_true", help="Interpret the search string as a regular expression")
     parser.add_argument("-u", "--unicode", action="store_true", help="Normalize search input and source text")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress logs to stdout")
-    parser.add_argument('-l', '--logfile', type=str, help='Write logs to specified JSON file (if already exists, appends, unless strict, which errors)')
+    parser.add_argument('-l', '--languages', type=str, nargs="+", default=["python"], help='Source code languages for extraction (default: python)')
+    parser.add_argument('-g', '--logfile', type=str, help='Write logs to specified JSON file (if already exists, appends, unless strict, which errors)')
     parser.add_argument("-v", "--version", action="store_true", help="Shows version")
     parser.add_argument("--strict", action="store_true", help="Abort on first error")
     parser.add_argument("--repo-url", type=str)
@@ -105,7 +106,6 @@ def main():
 
         searcher = searcher_class(
             parsnips_version=PARSNIPS_VERSION,
-            logger=logger,
             context_qualifiers=context_qualifiers,
             repo_root=args.repo_root or os.getcwd(),
             use_unicode=args.unicode,
@@ -127,7 +127,7 @@ def main():
 
         extractor = extractor_class(
             parsnips_version=PARSNIPS_VERSION,
-            logger=logger,
+            source_file_languages=args.languages or [],
             strict=args.strict,
             repo_root=args.repo_root
         )

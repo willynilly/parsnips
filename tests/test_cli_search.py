@@ -30,20 +30,24 @@ def parsnips_version():
 
 @pytest.fixture
 def logger():
-    logger = logging.getLogger("parsnips-test")
+    logger = logging.getLogger("parsnips")
     logger.setLevel(logging.CRITICAL)
     return logger
 
 @pytest.fixture
-def extractor(parsnips_version, logger):
-    return ParsnipsExtractor(parsnips_version=parsnips_version, logger=logger, strict=True)
+def source_file_languages():
+    return ['python']
+
+@pytest.fixture
+def extractor(parsnips_version, source_file_languages, logger):
+    return ParsnipsExtractor(parsnips_version=parsnips_version, source_file_languages=source_file_languages, strict=True)
 
 @pytest.fixture
 def searcher(parsnips_version, logger):
-    return ParsnipsSearcher(parsnips_version=parsnips_version, logger=logger)
+    return ParsnipsSearcher(parsnips_version=parsnips_version)
 
 
-def test_precise_search_functionality(extractor, searcher, logger, sample_python_code):
+def test_precise_search_functionality(extractor, searcher, sample_python_code):
     with tempfile.TemporaryDirectory() as tmpdir:
         file_path = Path(tmpdir) / "example.py"
         file_path.write_text(sample_python_code, encoding="utf-8")

@@ -14,6 +14,10 @@ def parsnips_version():
     return get_parsnips_version()
 
 @pytest.fixture
+def source_file_languages():
+    return ['python']
+
+@pytest.fixture
 def simple_python_code():
     return '''class MyClass:
     def foo(self, x, y=(1, 2)):
@@ -23,10 +27,13 @@ result = MyClass().foo(10)
 '''
 
 @pytest.fixture
-def extractor(parsnips_version):
-    logger = logging.getLogger("parsnips-test")
+def logger():
+    logger = logging.getLogger("parsnips")
     logger.setLevel(logging.CRITICAL)
-    return ParsnipsExtractor(parsnips_version=parsnips_version, logger=logger, strict=True)
+
+@pytest.fixture
+def extractor(parsnips_version, source_file_languages, logger):
+    return ParsnipsExtractor(parsnips_version=parsnips_version, source_file_languages=source_file_languages, strict=True)
 
 def test_extraction_creates_expected_output(extractor, simple_python_code):
     with tempfile.TemporaryDirectory() as tmpdir:

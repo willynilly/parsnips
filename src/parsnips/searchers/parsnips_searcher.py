@@ -1,4 +1,5 @@
 import bisect
+import logging
 import sys
 from pathlib import Path
 
@@ -11,9 +12,9 @@ from parsnips.swhid import Swhid
 
 class ParsnipsSearcher:
 
-    def __init__(self, parsnips_version: str, logger, context_qualifiers=None, repo_root=None, use_unicode=False, use_regex=False, strict=False):
+    def __init__(self, parsnips_version: str, context_qualifiers=None, repo_root=None, use_unicode=False, use_regex=False, strict=False):
         self.parsnips_verison = parsnips_version
-        self.logger = logger
+        self.logger = logging.getLogger('parsnips')
         self.context_qualifiers = context_qualifiers
         self.repo_root = repo_root
         self.use_unicode = use_unicode

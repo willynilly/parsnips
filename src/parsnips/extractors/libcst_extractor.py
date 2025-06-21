@@ -13,6 +13,10 @@ class LibCSTExtractor(ParsnipsExtractor):
         
     def get_fragment_type(self) -> str:
         return 'libcst.cst'
+    
+    @classmethod
+    def get_source_file_extensions_by_language_map(cls) -> dict[str, list[str]]:
+        return {'python': [".py"]}
 
     def get_file_fragments_generator(
         self,

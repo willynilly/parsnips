@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -12,14 +13,29 @@ from parsnips.swhid import Swhid
 
 class ParsnipsExtractor:
 
-    def __init__(self, parsnips_version: str, logger, strict=False, repo_root: Path | None = None):
+    def __init__(self, parsnips_version: str, source_file_languages: list[str], strict=False, repo_root: Path | None = None, sys_argv: list[str] | None = None):
         self.ignore_spec = None
         self.parsnips_version = parsnips_version
-        self.sys_argv = [arg for arg in sys.argv]
-        self.logger = logger
+        self.sys_argv = [arg for arg in sys.argv] if sys_argv is None else sys_argv
+        self.source_file_languages = source_file_languages
+        self.logger = logging.getLogger("parsnips")
         self.strict = strict
         self.raw_repo_root = Path(repo_root).resolve() if repo_root else None
         self.file_fragment_generators = []
+
+    @classmethod
+    def get_source_file_extensions_by_language_map(cls) -> dict[str, list[str]]:
+        raise NotImplementedError
+    
+    def get_fragment_type(self) -> str:
+        raise NotImplementedError
+    
+    def get_parser_script_version(self) -> str:
+        command: str = self.get_parser_script_command()
+        if command == 'parsnips':
+            return self.parsnips_version
+        else:
+            raise NotImplementedError
 
     def process(self, input_path: Path, args=None):
         input_path = Path(input_path).resolve()
@@ -44,55 +60,107 @@ class ParsnipsExtractor:
         parser_script_command: str = self.get_parser_script_command()
         parser_script_version: str = self.get_parser_script_version()
         parser_script_arguments: list[str] = self.get_parser_script_arguments()
+        normalized_source_file_languages: list[str] = self._get_normalized_source_file_languages()
+        normalized_source_file_extensions_by_language_map: dict[str, list[str]] = self._get_normalized_source_file_extensions_by_language_map()
         self._stream_fragments_to_file(output_path=output_path, 
                                        fragment_type=fragment_type,
+                                       source_file_languages=normalized_source_file_languages,
+                                       source_file_extensions_by_language_map = normalized_source_file_extensions_by_language_map,
                                        parsnips_version=self.parsnips_version,
                                        parser_script_command = parser_script_command,
                                        parser_script_version=parser_script_version,
                                        parser_script_arguments=parser_script_arguments,
                                        fragment_generator=fragment_generator)
 
+    
+    def _get_normalized_source_file_languages(self) -> list[str]:
+        return [language.casefold() for language in self.source_file_languages]
+    
+    def _get_normalized_source_file_extensions_by_language_map(self) -> dict[str, list[str]]:
+        raw_map: dict[str, list[str]] = self.get_source_file_extensions_by_language_map()
+        normalized_map: dict[str, list[str]] = {k.casefold() : v for k, v in raw_map.items()}
+        return normalized_map
+
+    def get_source_file_extensions(self, source_file_languages: list[str]) -> list[str]:
+        normalized_map: dict[str, list[str]] = self._get_normalized_source_file_extensions_by_language_map()
+        source_file_extensions: list[str] = []
+        for source_file_language in source_file_languages:
+            source_file_extensions += normalized_map.get(source_file_language.casefold(), [])
+        source_file_extensions = list(set(source_file_extensions)) # make them unique
+        return source_file_extensions
+    
     def get_parser_script_command(self) -> str:
         command = Path(self.sys_argv[0]).name # get the command without the full path
         return command 
     
-    def get_parser_script_version(self) -> str:
-        command: str = self.get_parser_script_command()
-        if command == 'parsnips':
-            return self.parsnips_version
-        else:
-            raise NotImplementedError
-    
     def get_parser_script_arguments(self) -> list[str]:
         return self.sys_argv[1:] # get all of the sys.argv values after the command
         
-    def get_fragment_type(self) -> str:
-        raise NotImplementedError
-
     def _stream_fragments_to_file(
         self,
         output_path: Path,
         fragment_type: str,
         parsnips_version: str,
+        source_file_languages: list[str],
+        source_file_extensions_by_language_map: dict[str, list[str]],
         parser_script_command: str,
         parser_script_version: str,
         parser_script_arguments: list[str],
         fragment_generator: Generator[ParsnipsFragment, None, None],
     ):
         with open(output_path, "w", encoding="utf-8") as f:
-            parser_script_arg_lines = json.dumps(parser_script_arguments or [], indent=2)[1:-1]
-            parser_script_arg_lines = "".join(["    " + p + "\n" for p in parser_script_arg_lines.splitlines()])
-
             
             f.write('{\n')
             f.write(f'  "parsnips_version": "{parsnips_version}",\n')
             f.write(f'  "fragment_type": "{fragment_type}",\n')
+            
+            if len(source_file_languages) == 0:
+                f.write('  "source_file_languages": [],\n')
+            else:
+                source_file_languages_lines = json.dumps(source_file_languages or [], indent=2)[1:-1]
+                source_file_languages_lines = "".join(["  " + p + "\n" for p in source_file_languages_lines.splitlines()])
+                f.write('  "source_file_languages": [')
+                f.write(f'{source_file_languages_lines}')
+                f.write('  ],\n')
+            
+            if len(source_file_extensions_by_language_map.keys()) == 0:
+                f.write('  "source_file_extensions_by_language_map": {},\n')
+            else:
+                f.write('  "source_file_extensions_by_language_map": {\n')
+                first_lang = True
+                for k, v in source_file_extensions_by_language_map.items():
+                    if not first_lang:
+                        f.write(',\n')
+                    if isinstance(v, list) and len(v) == 0:
+                        f.write(f'    "{k}": []')
+                    else:
+                        f.write(f'    "{k}": [\n')
+                        first_file_ext = True
+                        for file_ext in v:
+                            if not first_file_ext:
+                                f.write(',\n')
+                            f.write(f'      "{file_ext}"')
+                            first_file_ext = False
+                        f.write('\n    ]')
+                    first_lang = False
+                f.write('\n  },\n')
+
+
+
+
             f.write('  "parser_script": {\n')
             f.write(f'    "command": "{parser_script_command}",\n')
             f.write(f'    "version": "{parser_script_version}",\n')
-            f.write('    "arguments": [')
-            f.write(f'{parser_script_arg_lines}')
-            f.write('    ]\n')
+            
+            if len(parser_script_arguments) == 0:
+                f.write('    "arguments": []\n')
+            else:
+                parser_script_arg_lines = json.dumps(parser_script_arguments or [], indent=2)[1:-1]
+                parser_script_arg_lines = "".join(["    " + p + "\n" for p in parser_script_arg_lines.splitlines()])
+                f.write('    "arguments": [')
+                f.write(f'{parser_script_arg_lines}')
+                f.write('    ]\n')
+            
             f.write('  },\n')
             first = True
             has_fragment = False
@@ -112,23 +180,15 @@ class ParsnipsExtractor:
                 f.write('  "fragments": []\n')
             f.write('}\n')
 
-
-    # def _process_directory(self, directory: Path) -> Generator[ParsnipsFragment, None, None]:
-    #     for root, dirs, files in os.walk(directory):
-    #         dirs[:] = [d for d in dirs if d != "__pycache__"]
-    #         for file in files:
-    #             full_path = Path(root) / file
-    #             if file.endswith(".py"):
-    #                 yield from self._process_file(full_path)
-
     def _process_directory(self, directory: Path) -> Generator[ParsnipsFragment, None, None]:
+        source_file_extensions = self.get_source_file_extensions(source_file_languages=self.source_file_languages)
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if d != "__pycache__"]
             for file in files:
                 full_path = Path(root) / file
                 rel_path = full_path.relative_to(self.repo_root)
 
-                if not file.endswith(".py"):
+                if all([not file.endswith(file_ext) for file_ext in source_file_extensions]):
                     continue
                 
                 assert self.ignore_spec is not None
