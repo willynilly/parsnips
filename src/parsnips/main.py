@@ -5,11 +5,14 @@ import os
 import sys
 from pathlib import Path
 
-from parsnips.extractor import ParsnipsExtractor
+from parsnips.extractors.libcst_extractor import LibCSTExtractor
+from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
 from parsnips.pretty_json_dumper import PrettyJsonDumper
-from parsnips.searcher import ParsnipsSearcher
+from parsnips.searchers.parsnips_searcher import ParsnipsSearcher
 from parsnips.swh_context import SWHContext
+from parsnips.utils import get_parsnips_version, load_class
 
+PARSNIPS_VERSION: str = get_parsnips_version()
 
 def main():
     parser = argparse.ArgumentParser(description="Parsnips AST extractor and search tool.")
@@ -20,12 +23,16 @@ def main():
     parser.add_argument("-u", "--unicode", action="store_true", help="Normalize search input and source text")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress logs to stdout")
     parser.add_argument('-l', '--logfile', type=str, help='Write logs to specified JSON file (if already exists, appends, unless strict, which errors)')
+    parser.add_argument("-v", "--version", action="store_true", help="Shows version")
     parser.add_argument("--strict", action="store_true", help="Abort on first error")
     parser.add_argument("--repo-url", type=str)
     parser.add_argument("--commit", type=str)
     parser.add_argument("--release-name", type=str)
     parser.add_argument("--ref-name", type=str)
     parser.add_argument("--repo-root", type=str)
+    parser.add_argument("--extractor-class", type=str)
+    parser.add_argument("--searcher-class", type=str)
+
 
     args = parser.parse_args()
 
@@ -53,6 +60,10 @@ def main():
         file_handler = logging.FileHandler(args.logfile, mode=log_mode, encoding='utf-8')
         file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
         logger.addHandler(file_handler)
+
+    if args.version:
+        print('Parsnips v' + PARSNIPS_VERSION)
+        sys.exit(0)
 
     input_path = Path(args.path)
     if not input_path.exists():
@@ -83,7 +94,17 @@ def main():
             )
             context_qualifiers = swh_ctx.get_context_qualifiers()
 
-        searcher = ParsnipsSearcher(
+        if args.searcher_class:
+            searcher_class: type = load_class(args.searcher_class)
+        else:
+            searcher_class: type = ParsnipsSearcher 
+
+        if not issubclass(searcher_class, ParsnipsSearcher):
+            logger.error(f"Invalid searcher class: {searcher_class} should be a subclass of ParsnipsSearcher v{PARSNIPS_VERSION}")
+            exit(1)
+
+        searcher = searcher_class(
+            parsnips_version=PARSNIPS_VERSION,
             logger=logger,
             context_qualifiers=context_qualifiers,
             repo_root=args.repo_root or os.getcwd(),
@@ -94,7 +115,18 @@ def main():
         results = searcher.search(input_path, args.search)
         print(PrettyJsonDumper.dumps(results))
     else:
-        extractor = ParsnipsExtractor(
+
+        if args.extractor_class:
+            extractor_class: type = load_class(args.extractor_class)
+        else:
+            extractor_class: type = LibCSTExtractor 
+
+        if not issubclass(extractor_class, ParsnipsExtractor) or extractor_class is ParsnipsExtractor:
+            logger.error(f"Invalid extractor class: {extractor_class} should be a strict subclass of ParsnipsExtractor v{PARSNIPS_VERSION}")
+            exit(1)
+
+        extractor = extractor_class(
+            parsnips_version=PARSNIPS_VERSION,
             logger=logger,
             strict=args.strict,
             repo_root=args.repo_root

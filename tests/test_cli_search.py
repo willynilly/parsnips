@@ -5,9 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from parsnips.extractor import ParsnipsExtractor
-from parsnips.searcher import ParsnipsSearcher
+from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
+from parsnips.searchers.parsnips_searcher import ParsnipsSearcher
 from parsnips.swhid import Swhid
+from parsnips.utils import get_parsnips_version
 
 
 @pytest.fixture
@@ -24,18 +25,22 @@ class AnotherClass:
 '''
 
 @pytest.fixture
+def parsnips_version():
+    return get_parsnips_version()
+
+@pytest.fixture
 def logger():
     logger = logging.getLogger("parsnips-test")
     logger.setLevel(logging.CRITICAL)
     return logger
 
 @pytest.fixture
-def extractor(logger):
-    return ParsnipsExtractor(logger=logger, strict=True)
+def extractor(parsnips_version, logger):
+    return ParsnipsExtractor(parsnips_version=parsnips_version, logger=logger, strict=True)
 
 @pytest.fixture
-def searcher(logger):
-    return ParsnipsSearcher(logger=logger)
+def searcher(parsnips_version, logger):
+    return ParsnipsSearcher(parsnips_version=parsnips_version, logger=logger)
 
 
 def test_precise_search_functionality(extractor, searcher, logger, sample_python_code):

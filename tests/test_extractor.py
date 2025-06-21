@@ -5,8 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from parsnips.extractor import ParsnipsExtractor
+from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
+from parsnips.utils import get_parsnips_version
 
+
+@pytest.fixture
+def parsnips_version():
+    return get_parsnips_version()
 
 @pytest.fixture
 def simple_python_code():
@@ -18,10 +23,10 @@ result = MyClass().foo(10)
 '''
 
 @pytest.fixture
-def extractor():
+def extractor(parsnips_version):
     logger = logging.getLogger("parsnips-test")
     logger.setLevel(logging.CRITICAL)
-    return ParsnipsExtractor(logger=logger, strict=True)
+    return ParsnipsExtractor(parsnips_version=parsnips_version, logger=logger, strict=True)
 
 def test_extraction_creates_expected_output(extractor, simple_python_code):
     with tempfile.TemporaryDirectory() as tmpdir:
