@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from typing import Generator, cast
 
@@ -6,7 +7,7 @@ from libcst import CSTNode
 from libcst.metadata import CodePosition, CodeRange, MetadataWrapper, PositionProvider
 
 from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
-from parsnips.extractors.parsnips_fragment import ParsnipsFragment
+from parsnips.models.parsnips_fragment import ParsnipsFragment
 
 
 class LibCSTExtractor(ParsnipsExtractor):
@@ -14,19 +15,23 @@ class LibCSTExtractor(ParsnipsExtractor):
     def get_fragment_type(self) -> str:
         return 'libcst.cst'
     
-    @classmethod
-    def get_source_file_extensions_by_language_map(cls) -> dict[str, list[str]]:
-        return {'python': [".py"]}
+    def get_supported_languages(self) -> list[str]:
+        return ['python']
 
     def get_file_fragments_generator(
         self,
         file_path: Path,
         repo_root: str,
-        file_swhid: str,
-        source: str,
+        file_swhid: str
     ) -> Generator[ParsnipsFragment, None, None]:
         
-        wrapper = MetadataWrapper(cst.parse_module(source))
+        source: str = ''
+        try:
+            source = file_path.read_text(encoding="utf-8")
+            wrapper = MetadataWrapper(cst.parse_module(source))
+        except Exception as e:
+            self.logger.error(f"LibCSTExtractor error: Cannot load file {file_path.resolve()}: {e}")
+            sys.exit(1)
         metadata = wrapper.resolve(PositionProvider)
         traversal_counter = 0
         source_path = str(file_path.relative_to(repo_root))
@@ -47,7 +52,7 @@ class LibCSTExtractor(ParsnipsExtractor):
 
             depends_on_fragment_ids = [parent_fragment_id] if parent_fragment_id else []
 
-            yield ParsnipsFragment.from_dict({
+            yield ParsnipsFragment.model_validate_or_exit({
                 "fragment_id": fragment_id,
                 "depends_on_fragment_ids": depends_on_fragment_ids,
                 "type": node_type,

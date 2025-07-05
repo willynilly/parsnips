@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 
 from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
+from parsnips.models.config.parsnips_config import ParsnipsConfig
+from parsnips.models.swhid.content_swhid import ParsnipsContentSwhid
 from parsnips.searchers.parsnips_searcher import ParsnipsSearcher
-from parsnips.swhid import Swhid
-from parsnips.utils import get_parsnips_version
 
 
 @pytest.fixture
@@ -25,10 +25,6 @@ class AnotherClass:
 '''
 
 @pytest.fixture
-def parsnips_version():
-    return get_parsnips_version()
-
-@pytest.fixture
 def logger():
     logger = logging.getLogger("parsnips")
     logger.setLevel(logging.CRITICAL)
@@ -39,13 +35,20 @@ def source_file_languages():
     return ['python']
 
 @pytest.fixture
-def extractor(parsnips_version, source_file_languages, logger):
-    return ParsnipsExtractor(parsnips_version=parsnips_version, source_file_languages=source_file_languages, strict=True)
+def parsnips_config():
+    return ParsnipsConfig.from_json_file(Path(__file__).parent.parent / 'json_fixtures' / 'test-parsnips-config.json')
 
 @pytest.fixture
-def searcher(parsnips_version, logger):
-    return ParsnipsSearcher(parsnips_version=parsnips_version)
+def extraction_config(config):
+    return config.extract.extractions[0]
 
+@pytest.fixture
+def extractor(parsnips_config, extraction_config, source_file_languages, logger):
+    return ParsnipsExtractor(parsnips_config=parsnips_config, extraction_config=extraction_config)
+
+@pytest.fixture
+def searcher(parsnips_cli_version, logger):
+    return ParsnipsSearcher(parsnips_cli_version=parsnips_cli_version)
 
 def test_precise_search_functionality(extractor, searcher, sample_python_code):
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -84,7 +87,7 @@ def test_precise_search_functionality(extractor, searcher, sample_python_code):
 
             # Independently recompute SWHID and verify
             metadata_str = json.dumps(node_meta, sort_keys=True, ensure_ascii=False)
-            expected_swhid = Swhid.compute_content_swhid(metadata_str)
+            expected_swhid: str = str(ParsnipsContentSwhid.from_string(metadata_str))
             assert data["node_swhid_without_qualifiers"] == expected_swhid
 
         # Finally, ensure all expected nodes were found

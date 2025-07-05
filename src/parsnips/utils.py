@@ -1,4 +1,5 @@
 import importlib
+import sys
 from argparse import Namespace
 from pathlib import Path
 from typing import Generator
@@ -6,7 +7,7 @@ from typing import Generator
 from same_version.extractors.citation_cff_extractor import CitationCffExtractor
 
 
-def get_parsnips_version() -> str:
+def get_parsnips_cli_version() -> str:
     cli_args = Namespace()
     cli_args.citation_cff_path = Path(__file__).parent.parent.parent / 'CITATION.cff'
     return CitationCffExtractor(cli_args=cli_args).extract_version() or ""
@@ -26,4 +27,11 @@ def load_class(path: str) -> type:
         raise TypeError(f"{class_name} is not a class in module {module_path}")
     
     return cls
+
+def get_parser_script_command() -> str:
+    command = Path(sys.argv[0]).name # get the command without the full path
+    return command 
+
+def get_parser_script_arguments() -> list[str]:
+    return sys.argv[1:] # get all of the sys.argv values after the command
 

@@ -1,0 +1,45 @@
+{
+    "parsnips_protocol_version": "3.0.0",
+    "strict": true,
+    "log": {
+        "quiet": false,
+        "file": null
+    },
+    "search": {
+        "searcher_python_class": "parsnips.searchers.parsnips_searcher.ParsnipsSearcher",
+        "use_unicode": false,
+        "repo-url": null,
+        "commit": null,
+        "release_name": null,
+        "ref_name": null,
+        "repo_root": null
+    },
+    "extract": {
+        "extractions": [
+            {
+                "language": "python",
+                "extractor_python_class": "parsnips.extractors.tree_sitter_extractor.TreeSitterExtractor",
+                "extractor_script": {
+                    "name": "parsnips",
+                    "version": "3.0.0",
+                    "command": [
+                        "parsnips",
+                        "--config",
+                        "parsnips-config.json"
+                    ],
+                    "settings": {}
+                },
+                "include_patterns": {
+                    "regex": [],
+                    "glob": [
+                        "*.py"
+                    ]
+                },
+                "exclude_patterns": {
+                    "regex": [],
+                    "glob": []
+                }
+            }
+        ]
+    }
+}

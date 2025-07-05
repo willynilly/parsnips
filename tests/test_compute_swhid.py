@@ -1,6 +1,6 @@
 import json
 
-from parsnips.swhid import Swhid
+from parsnips.models.swhid.content_swhid import ParsnipsContentSwhid
 
 
 def test_compute_swhid_known_value():
@@ -16,6 +16,6 @@ def test_compute_swhid_known_value():
 
     metadata_str = json.dumps(sample_metadata, sort_keys=True, ensure_ascii=False)
     expected_swhid = "swh:1:cnt:19ba7fcee22a2eded332850851070299943c2b328a37f882bbf3620ec4586939"
-    computed_swhid = Swhid.compute_content_swhid(metadata_str)
+    computed_swhid = str(ParsnipsContentSwhid.from_string(metadata_str))
 
     assert computed_swhid == expected_swhid
