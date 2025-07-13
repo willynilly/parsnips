@@ -1,4 +1,8 @@
 
+from pathlib import Path
+
+from pydantic import field_validator
+
 from parsnips.models.parsnips_base_model import ParsnipsBaseModel
 
 
@@ -13,16 +17,13 @@ class ParsnipsFragment(ParsnipsBaseModel):
     end_col_offset: int | None = None # 0-based
     file_swhid_without_qualifiers: str | None = None
     file_swhid_with_qualifiers: str | None = None
-    source_path: str | None = None
+    source_path: Path | None = None # path relative to the repo root
     source_filename: str | None = None
+    
+    @field_validator("source_path", mode="after")
+    def must_be_relative(cls, v: Path | None) -> Path | None:
+        if v is not None and v.is_absolute():
+            raise ValueError("source_path must be relative")
+        return v
 
-    def is_valid(self) -> bool:
-        for k, v in self.model_dump().items():
-            if v is None:
-                return False
-            if k == "depends_on_fragment_ids":
-                if not all(isinstance(item, str) for item in v):
-                    return False
-            elif not isinstance(v, str):
-                return False
-        return True
+
