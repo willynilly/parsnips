@@ -21,7 +21,6 @@ class TreeSitterExtractor(ParsnipsExtractor):
         self,
         file_path: Path,
         repo_root: str,
-        file_swhid: str,
     ) -> Generator[ParsnipsFragment, None, None]:
         
         source: str = ''
@@ -48,22 +47,30 @@ class TreeSitterExtractor(ParsnipsExtractor):
             node_text = source[start_byte:end_byte]
             node_type = node.type
 
-            start_point = node.start_point  # (row, column)
-            lineno = start_point[0] + 1  # Tree-sitter uses 0-based lines
-            col_offset = start_point[1]
+            start_point = node.start_point  # (row, column) for start of fragment
+            end_point = node.end_point # (row, column) for end of fragment 
+
+            start_line_number = start_point[0] + 1 # Tree-sitter uses 0-based lines
+            start_col_offset = start_point[1]
+            end_line_number = end_point[0] + 1
+            end_col_offset = end_point[1]
 
             depends_on_fragment_ids = [parent_fragment_id] if parent_fragment_id else []
 
             yield ParsnipsFragment.model_validate({
                 "fragment_id": fragment_id,
                 "depends_on_fragment_ids": depends_on_fragment_ids,
-                "type": node_type,
-                "label": node_type,
+                "node_type": node_type,
                 "text": node_text,
-                "lineno": lineno,
-                "effective_lineno": lineno,
-                "col_offset": col_offset,
-                "file_swhid": file_swhid,
+
+                "start_line_number": start_line_number,
+                "start_col_offset": start_col_offset,
+                "end_line_number": end_line_number,
+                "end_col_offset": end_col_offset,
+
+                "file_swhid_without_qualifiers": self._create_file_swhid_without_qualifiers(file_path=file_path),
+                "file_swhid_with_qualifiers": None,
+                
                 "source_path": source_path,
                 "source_filename": file_path.name
             })

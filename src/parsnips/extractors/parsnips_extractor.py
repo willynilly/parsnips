@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Generator
 
@@ -14,14 +15,28 @@ from parsnips.utils import get_parsnips_cli_version
 
 class ParsnipsExtractor:
 
-    def __init__(self, parsnips_config: ParsnipsConfig, extraction_config: ExtractionConfig, repo_root: Path | None = None):
+    VCS_ROOT_FOLDERS: list[str] = ['.git', # Git 
+                                    '.svn', # Subversion
+                                    '.hg', # Mercurial
+                                    '.bzr' # Bazaar
+                                  ]
+
+    def __init__(self, parsnips_file_path: Path, parsnips_config: ParsnipsConfig, extraction_config: ExtractionConfig):
+        self.parsnips_file_path = parsnips_file_path
         self.parsnips_config = parsnips_config
         self.extraction_config = extraction_config
         self.source_file_language = extraction_config.language
         self.logger = logging.getLogger("parsnips")
         self.strict = parsnips_config.strict
-        self.raw_repo_root = Path(repo_root).resolve() if repo_root else None
         self.file_fragment_generators = []
+
+        self.repo_root: Path = Path(self.parsnips_file_path.parent).resolve() # the absolute path to the local repo directory
+        
+        # make sure the repo root is a root folder
+        # it must contain a subfolder for a recognized CVS (e.g., like .git subfolder for a Git repo)
+        if not any([(self.repo_root / folder).is_dir() and (self.repo_root / folder).exists() for folder in self.VCS_ROOT_FOLDERS]):
+            self.logger.error(f'Repo root is not a root folder for any known VCS: {self.repo_root}')
+            sys.exit(1)
     
     def get_fragment_type(self) -> str:
         raise NotImplementedError
@@ -29,7 +44,7 @@ class ParsnipsExtractor:
     def get_supported_languages(self) -> list[str]:
         raise NotImplementedError
 
-    def extract(self, input_path: Path) -> Extraction:
+    def extract(self) -> Extraction:
 
         supported_languages = [language.casefold() for language in self.get_supported_languages()]
         source_file_language = self._get_normalized_source_file_language()
@@ -38,18 +53,10 @@ class ParsnipsExtractor:
             self.logger.error(f"Unsupported language: {source_file_language}")
             exit(1)
 
-        input_path = Path(input_path).resolve()
-        if self.raw_repo_root is None:
-            self.repo_root: Path = input_path if input_path.is_dir() else input_path.parent
+        if self.repo_root.is_dir():
+            fragment_generator: Generator[ParsnipsFragment, None, None] = self._process_directory(directory=self.repo_root)
         else:
-            self.repo_root: Path = self.raw_repo_root
-
-        if input_path.is_file():
-            fragment_generator: Generator[ParsnipsFragment, None, None] = self._process_file(input_path)
-        elif input_path.is_dir():
-            fragment_generator: Generator[ParsnipsFragment, None, None] = self._process_directory(input_path)
-        else:
-            self.logger.error(f"Invalid path: {input_path}")
+            self.logger.error(f"Invalid repo root: {self.repo_root}")
             self._abort()
 
         extraction = Extraction(extraction_config=self.extraction_config, fragment_type=self.get_fragment_type(), fragment_generator=fragment_generator)
@@ -58,111 +65,16 @@ class ParsnipsExtractor:
     def _get_normalized_source_file_language(self) -> str:
         return self.source_file_language.casefold()
     
-    # @staticmethod
-    # def save(parsnips_config:ParsnipsConfig, extractions: list[Extraction], repo_root: Path):
-    #     output_path: Path = repo_root / "parsnips.json"
-    #     parsnips_cli_version = get_parsnips_cli_version()
-
-    #     with open(output_path, "w", encoding="utf-8") as f:
-            
-    #         f.write('{\n')
-    #         f.write(f'  "parsnips_protocol_version": {json.dumps(parsnips_config.parsnips_protocol_version)},\n')
-    #         f.write(f'  "parsnips_cli_version": {json.dumps(parsnips_cli_version)},\n')
-    #         f.write(f'  "strict": {json.dumps(parsnips_config.strict)},\n')
-
-    #         # f.write(f'  "fragment_type": {json.dumps(fragment_type)},\n')
-            
-    #         # if len(source_file_languages) == 0:
-    #         #     f.write('  "source_file_languages": [],\n')
-    #         # else:
-    #         #     source_file_languages_lines = json.dumps(source_file_languages or [], indent=2)[1:-1]
-    #         #     source_file_languages_lines = "".join(["  " + p + "\n" for p in source_file_languages_lines.splitlines()])
-    #         #     f.write('  "source_file_languages": [')
-    #         #     f.write(f'{source_file_languages_lines}')
-    #         #     f.write('  ],\n')
-            
-    #         # if len(source_file_whitelist_regex_patterns_by_language_map.keys()) == 0:
-    #         #     f.write('  "source_file_whitelist_regex_patterns_by_language_map": {},\n')
-    #         # else:
-    #         #     f.write('  "source_file_whitelist_regex_patterns_by_language_map": {\n')
-    #         #     first_lang = True
-    #         #     for k, v in source_file_whitelist_regex_patterns_by_language_map.items():
-    #         #         if not first_lang:
-    #         #             f.write(',\n')
-    #         #         if isinstance(v, list) and len(v) == 0:
-    #         #             f.write(f'    {json.dumps(k)}: []')
-    #         #         else:
-    #         #             f.write(f'    {json.dumps(k)}: [\n')
-    #         #             first_regex = True
-    #         #             for regex_pattern in v:
-    #         #                 if not first_regex:
-    #         #                     f.write(',\n')
-    #         #                 f.write(f'      {json.dumps(regex_pattern)}')
-    #         #                 first_regex = False
-    #         #             f.write('\n    ]')
-    #         #         first_lang = False
-    #         #     f.write('\n  },\n')
-
-    #         # f.write('  "parser_script": {\n')
-    #         # f.write(f'    "command": {json.dumps(parser_script_command)},\n')
-    #         # f.write(f'    "version": {json.dumps(parser_script_version)},\n')
-            
-    #         # if len(parser_script_arguments) == 0:
-    #         #     f.write('    "arguments": []\n')
-    #         # else:
-    #         #     parser_script_arg_lines = json.dumps(parser_script_arguments or [], indent=2)[1:-1]
-    #         #     parser_script_arg_lines = "".join(["    " + p + "\n" for p in parser_script_arg_lines.splitlines()])
-    #         #     f.write('    "arguments": [')
-    #         #     f.write(f'{parser_script_arg_lines}')
-    #         #     f.write('    ]\n')
-            
-    #         # f.write('  },\n')
-    #         first_extraction: bool = True
-    #         has_extraction: bool = False
-    #         for extraction in extractions:
-    #             has_extraction = True
-    #             if first_extraction:
-    #                 f.write('  "extractions": [\n')
-    #             else:
-    #                 f.write(',\n')
-
-    #             f.write('{\n')
-                
-    #             f.write(f'  "fragment_type": {json.dumps(extraction.fragment_type)},\n')
-    #             f.write(f'  "config": {json.dumps(extraction.extraction_config.model_dump())},\n')
-
-    #             first_fragment = True
-    #             has_fragment = False
-    #             for fragment in extraction.fragment_generator:
-    #                 has_fragment = True
-    #                 if first_fragment:
-    #                     f.write('     "fragments": [\n')
-    #                 else:
-    #                     f.write(',\n')
-    #                 frag_lines = fragment.to_pretty_json(ensure_ascii=False, indent=2)[1:-1]
-    #                 frag_lines = "".join(["    " + p + "\n" for p in frag_lines.splitlines()])
-    #                 f.write("    {" + frag_lines + "    }")
-    #                 first_fragment = False
-    #             if has_fragment:
-    #                 f.write('\n  ]\n')
-    #             else:
-    #                 f.write('     "fragments": []\n')
-    #             f.write('}\n')
-    #             first_extraction = False
-    #         if has_extraction:
-    #             f.write('\n  ]\n')
-    #         else:
-    #             f.write('  "extractions": []\n')
-    #         f.write('}\n')
-
-
+   
 
     @staticmethod
-    def save(parsnips_config: ParsnipsConfig, extractions: list[Extraction], repo_root: Path):
-        output_path: Path = repo_root / "parsnips.json"
+    def save(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, extractions: list[Extraction]):
+        logger = logging.getLogger("parsnips")
+        if parsnips_file_path.exists():
+            logger.info("parsnips.json already exists. Overwriting it.")
         parsnips_cli_version = get_parsnips_cli_version()
 
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(parsnips_file_path, "w", encoding="utf-8") as f:
             f.write('{\n')
             f.write(f'  "parsnips_protocol_version": {json.dumps(parsnips_config.parsnips_protocol_version)},\n')
             f.write(f'  "parsnips_cli_version": {json.dumps(parsnips_cli_version)},\n')
@@ -239,7 +151,7 @@ class ParsnipsExtractor:
                 rel_path = full_path.relative_to(self.repo_root)
 
                 if self._is_ignored(rel_path):
-                    self.logger.info(f"Ignored: {rel_path}")
+                    self.logger.info(f"Skipped: {rel_path}")
                     continue
 
                 yield from self._process_file(full_path)
@@ -253,14 +165,18 @@ class ParsnipsExtractor:
     
         self.logger.info(f"Extracting: {file_path}")
         try:
-            file_swhid:str = str(ParsnipsContentSwhid.from_file(file_path))
-            file_fragments_generator: Generator[ParsnipsFragment, None, None] = self.get_file_fragments_generator(file_path=file_path, repo_root=self.repo_root, file_swhid=file_swhid)
+            file_fragments_generator: Generator[ParsnipsFragment, None, None] = self.get_file_fragments_generator(file_path=file_path, repo_root=self.repo_root)
             yield from file_fragments_generator
         except Exception as e:
             self.logger.error(f"Failed to process {file_path}: {e}")
             self._abort()
 
-    def get_file_fragments_generator(self, file_path: Path, repo_root: Path, file_swhid: str) -> Generator[ParsnipsFragment, None, None]:
+    def _create_file_swhid_without_qualifiers(self, file_path: Path) -> str:
+        file_swhid_without_qualifiers:str = str(ParsnipsContentSwhid.from_file(file_path))
+        return file_swhid_without_qualifiers
+
+
+    def get_file_fragments_generator(self, file_path: Path, repo_root: Path) -> Generator[ParsnipsFragment, None, None]:
         raise NotImplementedError
     
     def _abort(self):

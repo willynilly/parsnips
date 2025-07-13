@@ -3,16 +3,32 @@
     "strict": true,
     "log": {
         "quiet": false,
-        "file": null
+        "file_path": null
     },
     "search": {
         "searcher_python_class": "parsnips.searchers.parsnips_searcher.ParsnipsSearcher",
         "use_unicode": false,
-        "repo-url": null,
-        "commit": null,
-        "release_name": null,
-        "ref_name": null,
-        "repo_root": null
+        "use_regex": false,
+        "swh": {
+            "repo_url": null,
+            "commit": null,
+            "release_name": null,
+            "ref_name": null,
+            "visit": null,
+            "repo_root": null
+        },
+        "include_patterns": {
+            "regex": [],
+            "glob": [
+                {
+                    "pattern": "*.py"
+                }
+            ]
+        },
+        "exclude_patterns": {
+            "regex": [],
+            "glob": []
+        }
     },
     "extract": {
         "extractions": [
@@ -23,16 +39,16 @@
                     "name": "parsnips",
                     "version": "3.0.0",
                     "command": [
-                        "parsnips",
-                        "--config",
-                        "parsnips-config.json"
+                        "parsnips"
                     ],
                     "settings": {}
                 },
                 "include_patterns": {
                     "regex": [],
                     "glob": [
-                        "*.py"
+                        {
+                            "pattern": "*.py"
+                        }
                     ]
                 },
                 "exclude_patterns": {

@@ -1,5 +1,4 @@
 import logging
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -28,6 +27,10 @@ result = MyClass().foo(10)
 '''
 
 @pytest.fixture
+def parsnips_file_path(tmp_path):
+    return tmp_path / "parsnips.json"
+
+@pytest.fixture
 def logger():
     logger = logging.getLogger("parsnips")
     logger.setLevel(logging.CRITICAL)
@@ -42,22 +45,20 @@ def extraction_config(parsnips_config):
     return extraction_config
     
 @pytest.fixture
-def extractor(parsnips_config, extraction_config):
-    return ParsnipsExtractor(parsnips_config=parsnips_config, extraction_config=extraction_config)
+def extractor(parsnips_file_path, parsnips_config, extraction_config):
+    return ParsnipsExtractor(parsnips_file_path=parsnips_file_path, parsnips_config=parsnips_config, extraction_config=extraction_config)
 
-def test_extraction_creates_expected_output(extractor, parsnips_config, source_file_language, simple_python_code):
+def test_extraction_creates_expected_output(tmp_path, parsnips_file_path, extractor, parsnips_config, source_file_language, simple_python_code):
     
-    with tempfile.TemporaryDirectory() as tmpdir:
-        repo_root = Path(tmpdir)
-        file_path = repo_root / "example.py"
-        file_path.write_text(simple_python_code, encoding="utf-8")
+    repo_root = tmp_path
+    file_path = repo_root / "example.py"
+    file_path.write_text(simple_python_code, encoding="utf-8")
 
-        extractions: list[Extraction] = []
-        extraction: Extraction = extractor.extract(file_path)
-        assert extraction.extraction_config.language == source_file_language, "extraction configuration has wrong language"
-        extractions.append(extraction)
+    extractions: list[Extraction] = []
+    extraction: Extraction = extractor.extract()
+    assert extraction.extraction_config.language == source_file_language, "extraction configuration has wrong language"
+    extractions.append(extraction)
 
-        ParsnipsExtractor.save(parsnips_config=parsnips_config, extractions=extractions, repo_root=repo_root)
+    ParsnipsExtractor.save(parsnips_file_path=parsnips_file_path, parsnips_config=parsnips_config, extractions=extractions)
 
-        parsnips_json = repo_root / "parsnips.json"
-        assert parsnips_json.exists(), "parsnips.json was not created"
+    assert parsnips_file_path.exists(), "parsnips.json was not created"

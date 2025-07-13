@@ -7,4 +7,4 @@ from parsnips.models.parsnips_base_model import ParsnipsBaseModel
 
 class LogConfig(ParsnipsBaseModel):
     quiet: bool
-    filename: Path | None
+    file_path: Path | None

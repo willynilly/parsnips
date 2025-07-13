@@ -5,13 +5,14 @@ from parsnips.models.parsnips_base_model import ParsnipsBaseModel
 class ParsnipsFragment(ParsnipsBaseModel):
     fragment_id: str | None = None
     depends_on_fragment_ids: list[str] = []
-    type: str | None = None
-    label: str | None = None
+    node_type: str | None = None
     text: str | None = None
-    lineno: int | None = None
-    effective_lineno: int | None = None
-    col_offset: int | None = None
-    file_swhid: str | None = None
+    start_line_number: int | None = None # 1-based
+    start_col_offset: int | None = None # 0-based
+    end_line_number: int | None = None # 1-based
+    end_col_offset: int | None = None # 0-based
+    file_swhid_without_qualifiers: str | None = None
+    file_swhid_with_qualifiers: str | None = None
     source_path: str | None = None
     source_filename: str | None = None
 

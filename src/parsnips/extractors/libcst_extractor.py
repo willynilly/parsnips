@@ -22,7 +22,6 @@ class LibCSTExtractor(ParsnipsExtractor):
         self,
         file_path: Path,
         repo_root: str,
-        file_swhid: str
     ) -> Generator[ParsnipsFragment, None, None]:
         
         source: str = ''
@@ -55,13 +54,17 @@ class LibCSTExtractor(ParsnipsExtractor):
             yield ParsnipsFragment.model_validate_or_exit({
                 "fragment_id": fragment_id,
                 "depends_on_fragment_ids": depends_on_fragment_ids,
-                "type": node_type,
-                "label": node_type,
+                "node_type": node_type,
                 "text": node_text,
-                "lineno": pos.start.line,
-                "effective_lineno": pos.start.line,
-                "col_offset": pos.start.column,
-                "file_swhid": file_swhid,
+                
+                "start_line_number": pos.start.line,
+                "start_col_offset": pos.start.column,
+                "end_line_number": pos.end.line,
+                "end_col_offset": pos.end.column,
+
+                "file_swhid_without_qualifiers": self._create_file_swhid_without_qualifiers(file_path=file_path),
+                "file_swhid_with_qualifiers": None,
+
                 "source_path": source_path,
                 "source_filename": file_path.name
             })

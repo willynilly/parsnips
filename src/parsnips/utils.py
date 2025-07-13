@@ -34,4 +34,3 @@ def get_parser_script_command() -> str:
 
 def get_parser_script_arguments() -> list[str]:
     return sys.argv[1:] # get all of the sys.argv values after the command
-
