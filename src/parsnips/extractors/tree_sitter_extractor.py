@@ -71,8 +71,7 @@ class TreeSitterExtractor(ParsnipsExtractor):
                 "file_swhid_without_qualifiers": self._create_file_swhid_without_qualifiers(file_path=file_path),
                 "file_swhid_with_qualifiers": None,
                 
-                "source_path": source_path,
-                "source_filename": file_path.name
+                "source_path": source_path
             })
 
             for child in node.children:

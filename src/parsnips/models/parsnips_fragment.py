@@ -18,7 +18,6 @@ class ParsnipsFragment(ParsnipsBaseModel):
     file_swhid_without_qualifiers: str | None = None
     file_swhid_with_qualifiers: str | None = None
     source_path: Path | None = None # path relative to the repo root
-    source_filename: str | None = None
     
     @field_validator("source_path", mode="after")
     def must_be_relative(cls, v: Path | None) -> Path | None:
