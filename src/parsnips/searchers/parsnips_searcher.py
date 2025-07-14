@@ -91,7 +91,10 @@ class ParsnipsSearcher:
 
                         match = regex_compiled.search(text)
                         if match:
-                            node_swhid = parsnips_fragment.swhid
+                            node_swhid: str = parsnips_fragment.swhid or ''
+                            if node_swhid == '':
+                                self.logger.error(f'Missing SWHID for fragment: {parsnips_fragment}')
+                                sys.exit(1)
                             if self.swhid_context_qualifiers and self.swhid_context_qualifiers.anchor:
                                 qualifiers: list[str] = []
                                 qualifiers.append(f"anchor={self.swhid_context_qualifiers.anchor}")
