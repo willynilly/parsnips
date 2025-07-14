@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Generator
 
@@ -12,6 +11,9 @@ from parsnips.models.parsnips_fragment import ParsnipsFragment
 from parsnips.models.swhid.content_swhid import ParsnipsContentSwhid
 from parsnips.utils import get_parsnips_cli_version
 
+
+class ParsnipsExtractorError(RuntimeError):
+    pass
 
 class ParsnipsExtractor:
 
@@ -34,9 +36,14 @@ class ParsnipsExtractor:
         
         # make sure the repo root is a root folder
         # it must contain a subfolder for a recognized CVS (e.g., like .git subfolder for a Git repo)
-        if not any([(self.repo_root / folder).is_dir() and (self.repo_root / folder).exists() for folder in self.VCS_ROOT_FOLDERS]):
-            self.logger.error(f'Repo root is not a root folder for any known VCS: {self.repo_root}')
-            sys.exit(1)
+        if not any([(self.repo_root / folder).is_dir() for folder in self.VCS_ROOT_FOLDERS]):
+            msg: str = f'Repo root is not a root folder for any known VCS: {self.repo_root}'
+            if self.strict:
+                self.logger.error(msg)
+                self._abort()
+            else:
+                self.logger.warning(msg)
+
     
     def get_fragment_type(self) -> str:
         raise NotImplementedError
@@ -51,7 +58,7 @@ class ParsnipsExtractor:
         
         if source_file_language not in supported_languages:
             self.logger.error(f"Unsupported language: {source_file_language}")
-            exit(1)
+            self._abort()
 
         if self.repo_root.is_dir():
             fragment_generator: Generator[ParsnipsFragment, None, None] = self._process_directory(directory=self.repo_root)
@@ -65,8 +72,6 @@ class ParsnipsExtractor:
     def _get_normalized_source_file_language(self) -> str:
         return self.source_file_language.casefold()
     
-   
-
     @staticmethod
     def save(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, extractions: list[Extraction]):
         logger = logging.getLogger("parsnips")
@@ -114,7 +119,7 @@ class ParsnipsExtractor:
                     if not first_fragment:
                         f.write(',\n')
 
-                    frag_json = fragment.to_pretty_json(indent=2, ensure_ascii=False)
+                    frag_json: str = fragment.to_pretty_json()
                     indented_json = ''.join(f'        {line}\n' for line in frag_json.splitlines())
                     indented_json = indented_json.rstrip('\n')
                     f.write(indented_json)
@@ -171,14 +176,13 @@ class ParsnipsExtractor:
             self.logger.error(f"Failed to process {file_path}: {e}")
             self._abort()
 
-    def _create_file_swhid_without_qualifiers(self, file_path: Path) -> str:
-        file_swhid_without_qualifiers:str = str(ParsnipsContentSwhid.from_file(file_path))
-        return file_swhid_without_qualifiers
+    def _create_swhid(self, file_path: Path, start_byte: int, end_byte: int) -> str:
+        swhid:str = str(ParsnipsContentSwhid.from_file(file_path)) + f";bytes={start_byte}-{end_byte}"
+        return swhid
 
 
     def get_file_fragments_generator(self, file_path: Path, repo_root: Path) -> Generator[ParsnipsFragment, None, None]:
         raise NotImplementedError
     
     def _abort(self):
-        if self.strict:
-            raise RuntimeError("Strict mode abort triggered")
+        raise ParsnipsExtractorError("Abort extraction.")

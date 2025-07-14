@@ -26,7 +26,8 @@ class LibCSTExtractor(ParsnipsExtractor):
         
         source: str = ''
         try:
-            source = file_path.read_text(encoding="utf-8")
+            source_bytes: bytes = file_path.read_bytes()
+            source = source_bytes.decode("utf-8")
             wrapper = MetadataWrapper(cst.parse_module(source))
         except Exception as e:
             self.logger.error(f"LibCSTExtractor error: Cannot load file {file_path.resolve()}: {e}")
@@ -42,10 +43,11 @@ class LibCSTExtractor(ParsnipsExtractor):
             pos = cast(CodeRange, metadata[node])
             start = cast(CodePosition, pos.start)
             end = cast(CodePosition, pos.end)
-                        
-            start_offset = self._get_offset(source, start.line, start.column)
-            end_offset = self._get_offset(source, end.line, end.column)
-            node_text = source[start_offset:end_offset]
+
+            start_byte: int = self._get_byte_offset(source=source, line=start.line, column=start.column)
+            end_byte: int = self._get_byte_offset(source=source, line=end.line, column=end.column) - 1
+            
+            node_text = source_bytes[start_byte:(end_byte + 1)].decode("utf-8")
 
             node_type = type(node).__name__
 
@@ -61,9 +63,10 @@ class LibCSTExtractor(ParsnipsExtractor):
                 "start_col_offset": pos.start.column,
                 "end_line_number": pos.end.line,
                 "end_col_offset": pos.end.column,
+                "start_byte": start_byte, # inclusive byte index starting at 0
+                "end_byte": end_byte, # inclusive byte index (like SWHID)
 
-                "file_swhid_without_qualifiers": self._create_file_swhid_without_qualifiers(file_path=file_path),
-                "file_swhid_with_qualifiers": None,
+                "swhid": self._create_swhid(file_path=file_path, start_byte=start_byte, end_byte=end_byte),
 
                 "source_path": source_path
             })
@@ -74,7 +77,21 @@ class LibCSTExtractor(ParsnipsExtractor):
 
         return walk(wrapper.module)
     
-    def _get_offset(self, source: str, line: int, column: int) -> int:
+    def _get_byte_offset(self, source: str, line: int, column: int) -> int:
+        # Split lines with line endings preserved so offsets match the original source
         lines = source.splitlines(keepends=True)
-        return sum(len(lines[i]) for i in range(line - 1)) + column
+
+        # Handle edge case: LibCST may give a line number that is one past the actual file
+        if line > len(lines):
+            self.logger.debug(f"Line {line} out of range. Falling back to EOF.")
+            return len(source.encode("utf-8"))
+
+        line_prefix = ''.join(lines[:line - 1]) + lines[line - 1][:column]
+        return len(line_prefix.encode("utf-8"))
+
+
+
+
+
+
 

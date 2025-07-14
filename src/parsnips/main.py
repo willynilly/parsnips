@@ -6,14 +6,16 @@ import sys
 from pathlib import Path
 
 from parsnips.extractors.libcst_extractor import LibCSTExtractor
-from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
+from parsnips.extractors.parsnips_extractor import (
+    ParsnipsExtractor,
+    ParsnipsExtractorError,
+)
 from parsnips.models.config.parsnips_config import ParsnipsConfig
 from parsnips.models.extraction import Extraction
 from parsnips.models.file_range import FileRange
+from parsnips.models.parsnips_search_results import ParsnipsSearchResults
 from parsnips.models.patterns.glob import Glob
 from parsnips.models.patterns.pattern_set import PatternSet
-from parsnips.models.swhid.swhid_context_qualifiers import SwhidContextQualifiers
-from parsnips.pretty_json_dumper import PrettyJsonDumper
 from parsnips.searchers.parsnips_searcher import ParsnipsSearcher
 from parsnips.utils import (
     get_parsnips_cli_version,
@@ -49,10 +51,6 @@ def main():
 def search_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, logger: logging.Logger):
     # search a parsnips.json file
 
-    swhid_context_qualifiers: SwhidContextQualifiers | None = None
-    if parsnips_config.search.swh.repo_url:
-        swhid_context_qualifiers = parsnips_config.search.swh.find_swhid_context_qualifiers()
-
     if parsnips_config.search.searcher_python_class:
         searcher_class: type = load_class(parsnips_config.search.searcher_python_class)
     else:
@@ -60,16 +58,13 @@ def search_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, l
     
     if not issubclass(searcher_class, ParsnipsSearcher):
         logger.error(f"Invalid searcher class: {searcher_class} should be a subclass of ParsnipsSearcher v{PARSNIPS_CLI_VERSION}")
-        exit(1)
+        sys.exit(1)
 
     logger.info(f"Using searcher class: {searcher_class}")
 
-    searcher = searcher_class(
-        parsnips_config=parsnips_config,
-        swhid_context_qualifiers=swhid_context_qualifiers,
-    )
-    results = searcher.search(parsnips_file_path=parsnips_file_path, search_text=parsnips_config.search.search_text, file_range=parsnips_config.search.file_range)
-    print(PrettyJsonDumper.dumps(results))
+    searcher = searcher_class(parsnips_config=parsnips_config)
+    results: ParsnipsSearchResults = searcher.search(parsnips_file_path=parsnips_file_path, search_text=parsnips_config.search.search_text, file_range=parsnips_config.search.file_range)
+    print(results.to_pretty_json())
 
 def extract_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, logger: logging.Logger):
     # create parsnips.json
@@ -83,19 +78,22 @@ def extract_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, 
 
         if not issubclass(extractor_class, ParsnipsExtractor) or extractor_class is ParsnipsExtractor:
             logger.error(f"Invalid extractor class: {extractor_class} should be a strict subclass of ParsnipsExtractor v{PARSNIPS_CLI_VERSION}")
-            exit(1)
+            sys.exit(1)
 
         logger.info(f"Using extractor class: {extractor_class}")
 
-        extractor = extractor_class(
-            parsnips_file_path=parsnips_file_path,
-            parsnips_config=parsnips_config,
-            extraction_config=extraction_config
-        )
+        try:
+            extractor = extractor_class(
+                parsnips_file_path=parsnips_file_path,
+                parsnips_config=parsnips_config,
+                extraction_config=extraction_config
+            )
+            extraction: Extraction = extractor.extract()
+            extractions.append(extraction)
+        except ParsnipsExtractorError:
+            logger.error("Extraction failed.")
+            sys.exit(1)
 
-        extraction: Extraction = extractor.extract()
-        extractions.append(extraction)
-    
     ParsnipsExtractor.save(parsnips_file_path=parsnips_file_path, parsnips_config=parsnips_config, extractions=extractions)
     logger.info("Extraction complete. Saved to parsnips.json.")
 

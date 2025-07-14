@@ -1,24 +1,24 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import sys
-from typing import Type, TypeVar, cast
+from typing import Any, Type, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
+
+from parsnips.pretty_json_dumper import PrettyJsonDumper
 
 SelfModel = TypeVar("SelfModel", bound="ParsnipsBaseModel")
 
 
 class ParsnipsBaseModel(BaseModel):
 
-    def to_pretty_json(self, ensure_ascii=False, indent=2):
-        return json.dumps(self.model_dump(mode="json"), ensure_ascii=ensure_ascii, indent=indent)
-
+    def to_pretty_json(self) -> str:
+        return PrettyJsonDumper.dumps(self)
 
     @classmethod
-    def model_validate_or_exit(cls: Type[SelfModel], data: dict | None = None, **kwargs) -> SelfModel:
+    def model_validate_or_exit(cls: Type[SelfModel], data: dict[str, Any] | None = None, **kwargs) -> SelfModel:
         try:
             return cast(SelfModel, cls.model_validate(data or {}, **kwargs))
         except ValidationError as e:

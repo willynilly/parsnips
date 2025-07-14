@@ -7,6 +7,8 @@ from parsnips.extractors.libcst_extractor import LibCSTExtractor
 from parsnips.extractors.parsnips_extractor import ParsnipsExtractor
 from parsnips.models.config.parsnips_config import ParsnipsConfig
 from parsnips.models.extraction import Extraction
+from parsnips.models.parsnips_fragment import ParsnipsFragment
+from parsnips.models.parsnips_search_results import ParsnipsSearchResults
 from parsnips.searchers.parsnips_searcher import ParsnipsSearcher
 
 
@@ -73,8 +75,8 @@ def test_cli_search_by_keyword_without_regex(tmp_path, git_dir_path, sample_pyth
     ParsnipsExtractor.save(parsnips_file_path=parsnips_file_path, parsnips_config=libcst_extractor.parsnips_config, extractions=[extraction])
 
     # Perform search
-    search_text = 'hello world'
-    results: dict = searcher.search(parsnips_file_path=parsnips_file_path, search_text=search_text)
+    search_text: str = 'hello world'
+    results: ParsnipsSearchResults = searcher.search(parsnips_file_path=parsnips_file_path, search_text=search_text)
 
     expected_nodes: set = {
         ("sample_python_code.py::1", "Module")
@@ -83,22 +85,23 @@ def test_cli_search_by_keyword_without_regex(tmp_path, git_dir_path, sample_pyth
     blacklist_words: list[str] = ["MyClass", "foo", "y="]
 
     found_nodes: set = set()
+ 
+    assert results.results, "Expected at least one search result"
 
-    for fragment_id, data in results.items():
+    for fragment_id, result in results.results.items():
         assert fragment_id.startswith("sample_python_code.py::")
-        assert "node_swhid_without_qualifiers" in data
-        assert "node_metadata" in data
+        
 
-        node_meta = data["node_metadata"]
+        fragment: ParsnipsFragment = result.node_metadata
         
         # Verify that "hello world" exists in node text
-        assert search_text in node_meta["text"]
+        assert fragment.text and search_text in fragment.text
 
         # verify that for non-module level nodes certain text was not found
-        if node_meta["node_type"] != "Module":
+        if fragment.node_type != "Module":
             for blacklist_word in blacklist_words:
-                assert blacklist_word not in node_meta["text"]
+                assert blacklist_word not in fragment.text
 
-        found_nodes.add((fragment_id, node_meta['node_type']))        
+        found_nodes.add((fragment_id, fragment.node_type))        
 
     assert expected_nodes <= found_nodes

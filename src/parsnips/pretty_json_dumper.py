@@ -1,5 +1,7 @@
 import json
 
+from pydantic import BaseModel
+
 
 class PrettyJsonDumper:
     INDENT = 2
@@ -7,6 +9,9 @@ class PrettyJsonDumper:
 
     @classmethod
     def dumps(cls, obj) -> str:
+        if isinstance(obj, BaseModel):
+            return json.dumps(obj.model_dump(mode="json"), ensure_ascii=cls.ENSURE_ASCII, indent=cls.INDENT)
+
         return json.dumps(obj, indent=cls.INDENT, ensure_ascii=cls.ENSURE_ASCII)
     
     @classmethod

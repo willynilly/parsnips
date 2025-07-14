@@ -23,16 +23,16 @@ class TreeSitterExtractor(ParsnipsExtractor):
         repo_root: str,
     ) -> Generator[ParsnipsFragment, None, None]:
         
-        source: str = ''
         try:
-            source = file_path.read_text(encoding="utf-8")
+            source_bytes = file_path.read_bytes()
         except Exception as e:
             self.logger.error(f"TreeSitterExtractor error: Cannot load file {file_path.resolve()}: {e}")
             sys.exit(1)
 
         source_file_language = self._get_normalized_source_file_language()
         parser = get_parser(cast(SupportedLanguage, source_file_language))
-        tree = parser.parse(bytes(source, "utf8"))
+        
+        tree = parser.parse(source_bytes)
 
         source_path = str(file_path.relative_to(repo_root))
         traversal_counter = 0
@@ -42,9 +42,9 @@ class TreeSitterExtractor(ParsnipsExtractor):
             traversal_counter += 1
             fragment_id = f"{source_path}::{traversal_counter}"
 
-            start_byte = node.start_byte
-            end_byte = node.end_byte
-            node_text = source[start_byte:end_byte]
+            start_byte: int = node.start_byte
+            end_byte: int = node.end_byte - 1 # must be inclusive like SWHID
+            node_text = source_bytes[start_byte:(end_byte + 1)].decode("utf-8")
             node_type = node.type
 
             start_point = node.start_point  # (row, column) for start of fragment
@@ -67,9 +67,10 @@ class TreeSitterExtractor(ParsnipsExtractor):
                 "start_col_offset": start_col_offset,
                 "end_line_number": end_line_number,
                 "end_col_offset": end_col_offset,
+                "start_byte": start_byte, # inclusive byte index starting at 0
+                "end_byte": end_byte, # inclusive byte index like SWHID
 
-                "file_swhid_without_qualifiers": self._create_file_swhid_without_qualifiers(file_path=file_path),
-                "file_swhid_with_qualifiers": None,
+                "swhid": self._create_swhid(file_path=file_path, start_byte=start_byte, end_byte=end_byte),
                 
                 "source_path": source_path
             })
