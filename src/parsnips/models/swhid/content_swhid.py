@@ -24,13 +24,10 @@ class ParsnipsContentSwhid(BaseModel):
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> ParsnipsContentSwhid:
         path = Path(path)
-        file_size = path.stat().st_size
-        sha1 = hashlib.sha1()
-        sha1.update(f"blob {file_size}\0".encode("utf-8"))
+        size = path.stat().st_size
         with path.open("rb") as f:
-            while chunk := f.read(8192):
-                sha1.update(chunk)
-        return cls(swhid=f"swh:1:cnt:{sha1.hexdigest()}")
+            return cls.from_stream(f, size)
+
 
     @classmethod
     def from_stream(cls, stream: BinaryIO, size: int) -> ParsnipsContentSwhid:
