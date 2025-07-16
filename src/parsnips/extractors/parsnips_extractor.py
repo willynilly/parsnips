@@ -156,7 +156,7 @@ class ParsnipsExtractor:
                 rel_path = full_path.relative_to(self.repo_root)
 
                 if self._is_ignored(rel_path):
-                    self.logger.info(f"Skipped: {rel_path}")
+                    self.logger.debug(f"Skipped: {rel_path}")
                     continue
 
                 yield from self._process_file(full_path)

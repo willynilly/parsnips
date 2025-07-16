@@ -4,12 +4,14 @@ import json
 from pathlib import Path
 from typing import ClassVar, Union
 
+from parsnips.loggers.log_level import LogLevel
 from parsnips.models.config.extract_config import ExtractConfig
 from parsnips.models.config.extraction_config import ExtractionConfig
 from parsnips.models.config.extractor_script_config import ExtractorScriptConfig
 from parsnips.models.config.log_config import LogConfig
 from parsnips.models.config.search_config import SearchConfig
 from parsnips.models.config.swh_search_config import SwhSearchConfig
+from parsnips.models.cvs.git import GitRemoteUrl
 from parsnips.models.file_range import FileRange
 from parsnips.models.parsnips_base_model import ParsnipsBaseModel
 from parsnips.models.patterns.glob import Glob
@@ -41,8 +43,9 @@ class ParsnipsConfig(ParsnipsBaseModel):
         parsnips_protocol_version = cls.DEFAULT_PARSNIPS_PROTOCOL_VERSION
         strict: bool = True
 
-        # configure logging        
-        log_config: LogConfig = LogConfig(quiet=False, file_path=None)
+        # configure logging
+        log_level: LogLevel = LogLevel.INFO       
+        log_config: LogConfig = LogConfig(quiet=False, file_path=None, log_level=log_level)
 
         # configure searching
         searcher_python_class: str = "parsnips.searchers.parsnips_searcher.ParsnipsSearcher"
@@ -50,7 +53,7 @@ class ParsnipsConfig(ParsnipsBaseModel):
         use_regex: bool = False
         search_text: str | None = None
 
-        repo_url: str | None = None
+        repo_url: str | None = GitRemoteUrl.from_repo().url
         commit: str | None = None
         release_name: str | None = None
         ref_name: str | None = None
@@ -84,3 +87,7 @@ class ParsnipsConfig(ParsnipsBaseModel):
 
         config = ParsnipsConfig(parsnips_protocol_version=parsnips_protocol_version, strict=strict, log=log_config, search=search_config, extract=extract_config)
         return config
+    
+    
+
+    

@@ -20,14 +20,23 @@ class ParsnipsSearcher:
         self.parsnips_config = parsnips_config
         self.parsnips_cli_verison = get_parsnips_cli_version()
         self.logger = logging.getLogger('parsnips')
+        self.strict = parsnips_config.strict
         
         self.swhid_context_qualifiers: SwhidContextQualifiers | None = None
         if self.parsnips_config.search.swh.repo_url:
-            self.swhid_context_qualifiers = parsnips_config.search.swh.find_swhid_context_qualifiers()        
+            try:
+                self.logger.info('Searching Software Heritage Archive for SWHID context qualifiers...')
+                self.swhid_context_qualifiers = parsnips_config.search.swh.find_swhid_context_qualifiers()        
+            except ValueError as e:
+                msg: str = f"SWHID context qualifiers not found in Software Heritage Archive: {e}"
+                if self.strict:
+                    self.logger.error(msg=msg)
+                    sys.exit(1)
+                else:
+                    self.logger.warning(msg=msg)
 
         self.use_unicode = parsnips_config.search.use_unicode
         self.use_regex = parsnips_config.search.use_regex
-        self.strict = parsnips_config.strict
 
     def normalize_unicode(self, text) -> str:
         import unicodedata

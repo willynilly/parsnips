@@ -13,3 +13,4 @@ class Glob(BaseModel):
     def matches(self, path: Union[str, Path]) -> bool:
         spec = pathspec.PathSpec.from_lines("gitwildmatch", [self.pattern])
         return spec.match_file(str(path))
+    

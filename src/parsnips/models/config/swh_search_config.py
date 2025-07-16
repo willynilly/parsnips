@@ -25,6 +25,37 @@ class SwhSearchConfig(ParsnipsBaseModel):
     snapshot_id: str | None = Field(default=None, exclude=True)
     anchor_swhid: str | None = Field(default=None, exclude=True)
 
+    # def lookup_snapshot(self) -> str:
+    #     """
+    #     Resolves the snapshot ID associated with the given origin.
+    #     Returns the most recent visit unless a specific visit ID is provided.
+    #     Raises if repo_url is not set, no visits exist, or snapshot cannot be determined.
+    #     """
+    #     if self.repo_url is None:
+    #         raise ValueError("repo_url is required to lookup snapshot")
+
+    #     origin_encoded = urllib.parse.quote(self.repo_url, safe='')
+    #     url = f"{self.SWH_API_BASE_URL}/origin/{origin_encoded}/visits/"
+    #     response = requests.get(url)
+    #     response.raise_for_status()
+    #     visits = response.json()['origin_visits']
+    #     if not visits:
+    #         raise ValueError("No visits found for origin in SWH.")
+
+    #     if not self.visit:
+    #         latest_visit = visits[-1]
+    #     else:
+    #         try:
+    #             latest_visit = next(v for v in visits if v['visit'] == int(self.visit))
+    #         except StopIteration:
+    #             raise ValueError(f"Visit ID {self.visit} not found in origin visits.")
+
+    #     self.snapshot_id = latest_visit['snapshot']
+    #     if self.snapshot_id is None:
+    #         raise ValueError("Failed to resolve snapshot_id from SWH API.")
+
+    #     return self.snapshot_id
+
     def lookup_snapshot(self) -> str:
         """
         Resolves the snapshot ID associated with the given origin.
@@ -34,27 +65,53 @@ class SwhSearchConfig(ParsnipsBaseModel):
         if self.repo_url is None:
             raise ValueError("repo_url is required to lookup snapshot")
 
-        origin_encoded = urllib.parse.quote(self.repo_url, safe='')
+        origin_encoded = urllib.parse.quote(self.repo_url, safe="")
         url = f"{self.SWH_API_BASE_URL}/origin/{origin_encoded}/visits/"
         response = requests.get(url)
-        response.raise_for_status()
-        visits = response.json()['origin_visits']
+
+        if response.status_code == 404:
+            raise ValueError(
+                f"Software Heritage has not archived the repository:\n  {self.repo_url}\n\n"
+                "You can request ingestion at:\n"
+                "   https://save.softwareheritage.org/\n\n"
+                "Once the repo is ingested, re-run this command."
+            )
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            raise RuntimeError(
+                f"Failed to query SWH API for origin visits.\n"
+                f"URL: {url}\n"
+                f"HTTP Status: {response.status_code}\n"
+                f"Response: {response.text}"
+            ) from e
+
+        data = response.json()
+        visits = data.get("origin_visits")
         if not visits:
-            raise ValueError("No visits found for origin in SWH.")
+            raise ValueError(
+                f"No visits found for origin in Software Heritage for:\n  {self.repo_url}"
+            )
 
         if not self.visit:
             latest_visit = visits[-1]
         else:
             try:
-                latest_visit = next(v for v in visits if v['visit'] == int(self.visit))
-            except StopIteration:
-                raise ValueError(f"Visit ID {self.visit} not found in origin visits.")
+                latest_visit = next(v for v in visits if v["visit"] == int(self.visit))
+            except (StopIteration, ValueError):
+                raise ValueError(
+                    f"Visit ID {self.visit} not found in origin visits for:\n  {self.repo_url}"
+                )
 
-        self.snapshot_id = latest_visit['snapshot']
+        self.snapshot_id = latest_visit.get("snapshot")
         if self.snapshot_id is None:
-            raise ValueError("Failed to resolve snapshot_id from SWH API.")
+            raise ValueError(
+                f"Snapshot ID could not be resolved for origin:\n  {self.repo_url}"
+            )
 
         return self.snapshot_id
+
 
     def get_snapshot_object(self) -> dict:
         """
@@ -143,6 +200,7 @@ class SwhSearchConfig(ParsnipsBaseModel):
         Produces a structured object of SWHID context qualifiers
         including origin, visit (snapshot), and anchor (commit/tag).
         """
+        
         if not self.repo_url:
             raise ValueError("repo_url is required")
         if not self.anchor_swhid:

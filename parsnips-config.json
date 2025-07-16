@@ -1,0 +1,89 @@
+{
+  "parsnips_protocol_version": "3.0.0",
+  "strict": true,
+  "log": {
+    "quiet": false,
+    "file_path": null,
+    "log_level": "INFO"
+  },
+  "search": {
+    "searcher_python_class": "parsnips.searchers.parsnips_searcher.ParsnipsSearcher",
+    "use_unicode": false,
+    "use_regex": false,
+    "swh": {
+      "repo_url": "https://github.com/willynilly/parsnips.git",
+      "commit": null,
+      "release_name": null,
+      "ref_name": null,
+      "visit": null
+    },
+    "include_patterns": {
+      "regex": [],
+      "glob": [
+        {
+          "pattern": "*.py"
+        }
+      ]
+    },
+    "exclude_patterns": {
+      "regex": [],
+      "glob": [
+        {
+          "pattern": ".env"
+        },
+        {
+          "pattern": "*.pyc"
+        },
+        {
+          "pattern": "dist/"
+        },
+        {
+          "pattern": "dummy/"
+        }
+      ]
+    },
+    "file_range": null,
+    "search_text": null
+  },
+  "extract": {
+    "extractions": [
+      {
+        "language": "python",
+        "extractor_python_class": "parsnips.extractors.tree_sitter_extractor.TreeSitterExtractor",
+        "extractor_script": {
+          "name": "parsnips",
+          "version": "3.0.0",
+          "command": [
+            "parsnips"
+          ],
+          "settings": {}
+        },
+        "include_patterns": {
+          "regex": [],
+          "glob": [
+            {
+              "pattern": "*.py"
+            }
+          ]
+        },
+        "exclude_patterns": {
+          "regex": [],
+          "glob": [
+            {
+              "pattern": ".env"
+            },
+            {
+              "pattern": "*.pyc"
+            },
+            {
+              "pattern": "dist/"
+            },
+            {
+              "pattern": "dummy/"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

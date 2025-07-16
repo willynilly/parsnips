@@ -1,4 +1,3 @@
-# main.py
 import argparse
 import logging
 import os
@@ -10,6 +9,8 @@ from parsnips.extractors.parsnips_extractor import (
     ParsnipsExtractor,
     ParsnipsExtractorError,
 )
+from parsnips.loggers.log_level import LogLevel
+from parsnips.loggers.logger import LoggerFactory
 from parsnips.models.config.parsnips_config import ParsnipsConfig
 from parsnips.models.extraction import Extraction
 from parsnips.models.file_range import FileRange
@@ -20,6 +21,7 @@ from parsnips.searchers.parsnips_searcher import ParsnipsSearcher
 from parsnips.utils import (
     get_parsnips_cli_version,
     load_class,
+    load_gitignore_patterns,
 )
 
 PARSNIPS_CLI_VERSION: str = get_parsnips_cli_version()
@@ -31,25 +33,23 @@ def main():
     if args.version:
         show_parsnips_cli_version()
         sys.exit(0)
+
+    if args.delete:
+        delete_parsnips()
+        sys.exit(0)
     
     parsnips_config: ParsnipsConfig = setup_parsnips_config(args=args)
     
-    logger: logging.Logger = setup_logger(parsnips_config=parsnips_config)
-
-    parsnips_file_path: Path = get_parsnips_file_path(args=args)
-
-
-    if args.delete:
-        delete_parsnips(parsnips_file_path=parsnips_file_path, logger=logger)
-        sys.exit(0)
+    logger: logging.Logger = LoggerFactory.setup_logger(parsnips_config=parsnips_config)
 
     if args.search:
-        search_parsnips(parsnips_file_path=parsnips_file_path, parsnips_config=parsnips_config, logger=logger)
+        search_parsnips(parsnips_config=parsnips_config, logger=logger)
     else:
-        extract_parsnips(parsnips_file_path=parsnips_file_path, parsnips_config=parsnips_config, logger=logger)
+        extract_parsnips(parsnips_config=parsnips_config, logger=logger)
 
-def search_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, logger: logging.Logger):
+def search_parsnips(parsnips_config: ParsnipsConfig, logger: logging.Logger):
     # search a parsnips.json file
+    parsnips_file_path: Path = get_parsnips_file_path()
 
     if parsnips_config.search.searcher_python_class:
         searcher_class: type = load_class(parsnips_config.search.searcher_python_class)
@@ -66,8 +66,10 @@ def search_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, l
     results: ParsnipsSearchResults = searcher.search(parsnips_file_path=parsnips_file_path, search_text=parsnips_config.search.search_text, file_range=parsnips_config.search.file_range)
     print(results.to_pretty_json())
 
-def extract_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, logger: logging.Logger):
+def extract_parsnips(parsnips_config: ParsnipsConfig, logger: logging.Logger):
     # create parsnips.json
+    parsnips_file_path: Path = get_parsnips_file_path()
+
     extractions: list[Extraction] = []
     for extraction_config in parsnips_config.extract.extractions:
 
@@ -97,27 +99,32 @@ def extract_parsnips(parsnips_file_path: Path, parsnips_config: ParsnipsConfig, 
     ParsnipsExtractor.save(parsnips_file_path=parsnips_file_path, parsnips_config=parsnips_config, extractions=extractions)
     logger.info("Extraction complete. Saved to parsnips.json.")
 
-def get_parsnips_file_path(args: argparse.Namespace) -> Path:
+def get_parsnips_file_path() -> Path:
     parsnips_file_path: Path = Path("parsnips.json") 
     return parsnips_file_path
 
-def get_parsnips_config_file_path(args: argparse.Namespace) -> Path:
+def get_parsnips_config_file_path() -> Path:
     parsnips_config_file_path: Path = Path('parsnips-config.json')    
     return parsnips_config_file_path
 
-def delete_parsnips(parsnips_file_path: Path | None, logger: logging.Logger):
-    if parsnips_file_path and parsnips_file_path.exists():
-        try:
-            os.remove(parsnips_file_path)
-            logger.info(f"Deleted: {parsnips_file_path}")
-        except Exception as e:
-            logger.warning(f"Failed to delete: {parsnips_file_path} {e}")
-    else:
-        logger.info(f"No {parsnips_file_path} found.")
+def delete_parsnips():
+    parsnips_file_path: Path = get_parsnips_file_path()
+    parsnips_config_file_path: Path = get_parsnips_config_file_path()
+    files_to_delete: list[Path] = [parsnips_file_path, parsnips_config_file_path]
+    for file_to_delete in files_to_delete:
+        if file_to_delete and file_to_delete.exists():
+            try:
+                os.remove(file_to_delete)
+                print(f"Deleted: {file_to_delete}")
+            except Exception as e:
+                print(f"Failed to delete: {file_to_delete} {e}")
+        else:
+            print(f"No {file_to_delete} found to delete.") 
+   
 
 def get_args():
     parser = argparse.ArgumentParser(description="Parsnips CST and AST extractor and search tool.")
-    parser.add_argument("-d", "--delete", action="store_true", help="Deletes parsnips.json")
+    parser.add_argument("-d", "--delete", action="store_true", help="Deletes parsnips.json and parsnips-config.json")
     parser.add_argument("-s", "--search", type=str, help="Target string to search within node texts")
     parser.add_argument("-r", "--regex", action="store_true", help="Interpret the target string as a regular expression")
     parser.add_argument("-u", "--unicode", action="store_true", help="Normalize target string and source text")
@@ -127,6 +134,7 @@ def get_args():
     parser.add_argument('-e', '--exclude', type=str, nargs="+", help='Glob patterns for source code files to exclude in search or extraction.')
     parser.add_argument('-g', '--log', type=str, help='Path to JSON log file (if already exists, appends, unless strict, which errors)')
     parser.add_argument("-v", "--version", action="store_true", help="Shows version")
+    parser.add_argument("--log-level", help="The level to log information (DEBUG, INFO, WARNING, ERROR, CRITICAL) (default: INFO)")
     parser.add_argument("--strict", action="store_true", help="Abort on first error")
     parser.add_argument("--start-line-number", type=int, help="Search start line number in target file (1-indexed)")
     parser.add_argument("--start-col-offset", type=int, help="Search start column offset in target file (0-indexed)")
@@ -146,41 +154,14 @@ def get_args():
 def show_parsnips_cli_version():
     print('Parsnips v' + PARSNIPS_CLI_VERSION)
 
-def setup_logger(parsnips_config: ParsnipsConfig) -> logging.Logger:
-    logger = logging.getLogger("parsnips")
-    logger.setLevel(logging.INFO)
-    if not parsnips_config.log.quiet:
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
-        logger.addHandler(handler)
-    logfile: Path | None = parsnips_config.log.file_path
-    if logfile:
-        log_mode: str = "w"
-        if not logfile.name.endswith('.json'):
-            logger.error(f"Invalid log file: {logfile} must end with .json")
-            sys.exit(1)
-        if logfile.exists():
-            msg = f"Log file aleady exists: {logfile}"
-            if parsnips_config.strict:
-                logger.error(msg)
-                sys.exit(1)
-            else:
-                logger.warning(msg)
-                logger.info(f"Appending to log file: {logfile}")
-                log_mode = "a"
-        file_handler = logging.FileHandler(logfile, mode=log_mode, encoding='utf-8')
-        file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
-        logger.addHandler(file_handler)
-    return logger
-
 def setup_parsnips_config(args: argparse.Namespace) -> ParsnipsConfig:
     # if parsnips-config.json does not exist, 
     # create a default parsnips-config.json
-    parnsips_config_file_path: Path = get_parsnips_config_file_path(args=args)
+    parnsips_config_file_path: Path = get_parsnips_config_file_path()
     if not parnsips_config_file_path.exists():
         language: str = args.language if args.language else 'python'
         glob_include_patterns: list[str] = args.include if args.include else ['*.py']
-        glob_exclude_patterns: list[str] = args.exclude if args.exclude else []
+        glob_exclude_patterns: list[str] = args.exclude if args.exclude else load_gitignore_patterns()
 
         default_config: ParsnipsConfig = ParsnipsConfig.from_default(language=language, 
                                                                      glob_include_patterns=glob_include_patterns,
@@ -203,6 +184,8 @@ def setup_parsnips_config(args: argparse.Namespace) -> ParsnipsConfig:
         parsnips_config.log.quiet = True
     if args.log:
         parsnips_config.log.file_path = args.log
+    if args.log_level:
+        parsnips_config.log.log_level = LogLevel.from_str(args.log_level)
     if args.search:
         parsnips_config.search.search_text = args.search
     if args.regex:

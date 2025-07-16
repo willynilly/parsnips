@@ -34,3 +34,16 @@ def get_parser_script_command() -> str:
 
 def get_parser_script_arguments() -> list[str]:
     return sys.argv[1:] # get all of the sys.argv values after the command
+
+def load_gitignore_patterns(file_path: Path | None = None) -> list[str]:
+    if file_path is None:
+        file_path = Path('.gitignore')
+    patterns: list[str] = []
+    if file_path.exists():
+        with open(file_path, "r") as f:
+            patterns = [
+                line.strip()
+                for line in f
+                if line.strip() and not line.strip().startswith("#")
+            ]
+    return patterns
